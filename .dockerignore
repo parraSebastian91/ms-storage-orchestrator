@@ -1,0 +1,41 @@
+# Git
+.git/
+.gitignore
+
+# Environment files (se copian explícitamente si se necesitan)
+.env
+.env.local
+.env.*.local
+
+# Documentation
+README.md
+*.md
+
+# Build artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+testdata/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/

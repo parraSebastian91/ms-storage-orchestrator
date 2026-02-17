@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-storage-orchestrator
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ENV=development
+    env_file:
+      - .env.dev
+    volumes:
+      # Monta el código fuente para desarrollo (comentar en producción)
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Descomentar si necesitas PostgreSQL
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: ms-storage-db
+  #   environment:
+  #     POSTGRES_USER: ${DB_USER:-admin}
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+  #     POSTGRES_DB: ${DB_NAME:-storage_db}
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - app-network
+
+  # Descomentar si necesitas Redis
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: ms-storage-cache
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
