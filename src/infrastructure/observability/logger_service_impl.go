@@ -65,21 +65,37 @@ func NewCustomLogger(ServiceName string, min string, production bool) *CustomLog
 func (l *CustomLogger) log(level Level, msg string, color string, args ...interface{}) {
 	if level < l.minLevel {
 		return
+	} // unwrap: si viene un solo map, tratarlo como campos
+	var fields map[string]interface{}
+	if len(args) == 1 {
+		if m, ok := args[0].(map[string]interface{}); ok {
+			fields = m
+			args = nil
+		}
 	}
+
 	if l.production {
 		entry := map[string]interface{}{
 			"ts":    time.Now().Format(time.RFC3339),
 			"level": levelString(level),
 			"msg":   msg,
-			"args":  args,
+		}
+		if fields != nil {
+			for k, v := range fields {
+				entry[k] = v
+			}
+		} else if len(args) > 0 {
+			entry["args"] = args
 		}
 		b, _ := json.Marshal(entry)
 		l.logger.Println(string(b))
 	} else {
 		timestamp := time.Now().Format("2006-01-02 15:04:05")
 		logmsg := fmt.Sprintf("%s[%s] [%s] %s: %s%s\n", color, timestamp, l.serviceName, levelString(level), msg, reset)
-		if len(args) > 0 {
-			logmsg += fmt.Sprintf("%sArgs: %v%s\n", color, args, reset)
+		if fields != nil {
+			logmsg += fmt.Sprintf("%sFields: %v%s\n", burple, fields, reset)
+		} else if len(args) > 0 {
+			logmsg += fmt.Sprintf("%sArgs: %v%s\n", burple, args, reset)
 		}
 		fmt.Println(logmsg)
 	}

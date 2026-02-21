@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,8 +33,12 @@ func NewPostgresClient(cfg config.PostgresConfig, logger *observability.CustomLo
 	}
 
 	// Opcional: tuning básico
-	poolConfig.MaxConns = 10
+	maxConns, err := strconv.Atoi(cfg.MaxConns)
+	if err != nil {
+		return nil, fmt.Errorf("invalid maxConns value: %v", err)
+	}
 	poolConfig.MinConns = 2
+	poolConfig.MaxConns = int32(maxConns)
 	poolConfig.MaxConnIdleTime = 5 * time.Minute
 	poolConfig.MaxConnLifetime = 30 * time.Minute
 

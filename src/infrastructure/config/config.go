@@ -13,6 +13,8 @@ import (
 type Config struct {
 	Postgres PostgresConfig
 	Server   ServerConfig
+	RabbitMQ RabbitMQConfig
+	Storage  StorageConfig
 }
 
 type ServerConfig struct {
@@ -30,6 +32,21 @@ type PostgresConfig struct {
 	User     string
 	Password string
 	DBName   string
+	MaxConns string
+}
+
+type RabbitMQConfig struct {
+	URL      string
+	Exchange string
+	Queue    string
+}
+
+type StorageConfig struct {
+	Endpoint        string
+	AccessKeyID     string
+	SecretAccessKey string
+	UseSSL          bool
+	BucketNameRaw   string
 }
 
 func InitConfig() *Config {
@@ -45,6 +62,7 @@ func InitConfig() *Config {
 			User:     getEnvOrDefault("POSTGRE_USER", "admin"),
 			Password: getEnvOrDefault("POSTGRE_PASSWORD", "secret"),
 			DBName:   getEnvOrDefault("POSTGRE_NAME", "storage_db"),
+			MaxConns: getEnvOrDefault("POSTGRE_MAX_CONNS", "10"),
 		},
 		Server: ServerConfig{
 			Port:        getEnvOrDefault("PORT", "8080"),
@@ -53,6 +71,18 @@ func InitConfig() *Config {
 			MinLogLevel: getEnvOrDefault("MIN_LOG_LEVEL", "info"),
 			FiberConfig: getFiberConfig(getEnvOrDefault("ENV", "development")),
 			CorsConfig:  getCorsConfig(getEnvOrDefault("ENV", "development")),
+		},
+		RabbitMQ: RabbitMQConfig{
+			URL:      getEnvOrDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
+			Exchange: getEnvOrDefault("RABBITMQ_EXCHANGE", "storage_task_exchange"),
+			Queue:    getEnvOrDefault("RABBITMQ_QUEUE", "storage_tasks"),
+		},
+		Storage: StorageConfig{
+			Endpoint:        getEnvOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
+			AccessKeyID:     getEnvOrDefault("STORAGE_ACCESS_KEY", "minioadmin"),
+			SecretAccessKey: getEnvOrDefault("STORAGE_SECRET_KEY", "minioadmin"),
+			UseSSL:          getEnvOrDefault("STORAGE_USE_SSL", "false") == "true",
+			BucketNameRaw:   getEnvOrDefault("STORAGE_BUCKET_NAME_RAW", "storage-bucket-raw"),
 		},
 	}
 }

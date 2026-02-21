@@ -9,14 +9,21 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
+	storageapplication "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/storageApplication"
+	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/controller"
+	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/routes"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/outbound/database"
+	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/outbound/messaging"
+	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/outbound/storage"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/config"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/observability"
 )
 
 type AppResources struct {
-	logger         *observability.CustomLogger
 	postgresClient *database.PostgresClient
+	rabbitMqClient *messaging.MessagingPublisherClient
+	storageClient  *storage.StorageClient
+	logger         *observability.CustomLogger
 }
 
 func main() {
@@ -29,17 +36,28 @@ func main() {
 
 	app := InitFiberApp(cfg.Server.FiberConfig, cfg.Server.CorsConfig)
 
-	// ======== INICIALIZACION OBESERVADORES ========
-
-	logger := observability.NewCustomLogger(cfg.Server.ServiceName, cfg.Server.MinLogLevel, cfg.Server.Env == "production")
-
 	// ======== INICIALIZACION RECURSOS ========
 
-	resources, err := InitResources(cfg, logger)
+	resources, err := InitResources(cfg)
 	if err != nil {
-		logger.Fatal("Error initializing resources: " + err.Error())
+		resources.logger.Fatal("Error initializing resources: " + err.Error())
 	}
+	// ======== Inicializacion Adaptadores ========
 
+	messagingPublisher := messaging.NewMessagingPublisherImpl(resources.rabbitMqClient, resources.logger)
+	storageMinIOAdapterService := storage.NewStorageMinIOServiceImpl(resources.storageClient, resources.logger)
+
+	// ======== Inicializacion Aplication Use Cases ========
+
+	storageApplication := storageapplication.NewStorageApplication(storageMinIOAdapterService, messagingPublisher, resources.logger)
+
+	// ======== INICIALIZACION CONTROLADORES Y RUTAS ========
+
+	storageController := controller.NewStorageController(storageApplication, resources.logger)
+
+	// ======== INICIALIZACION SERVIDOR ========
+
+	routes.SetupRoutes(app, storageController)
 	startServer(app, cfg.Server.Port, resources)
 }
 
@@ -49,16 +67,30 @@ func InitFiberApp(config fiber.Config, corsConfig cors.Config) *fiber.App {
 	return app
 }
 
-func InitResources(cfg *config.Config, logger *observability.CustomLogger) (*AppResources, error) {
+func InitResources(cfg *config.Config) (*AppResources, error) {
+
+	logger := observability.NewCustomLogger(cfg.Server.ServiceName, cfg.Server.MinLogLevel, cfg.Server.Env == "production")
 
 	postgresClient, err := database.NewPostgresClient(cfg.Postgres, logger)
 	if err != nil {
 		return nil, err
 	}
-
+	logger.Info("Postgres client initialized successfully")
+	rabbitMqClient, err := messaging.NewMessagingPublisherClient(cfg.RabbitMQ.URL, cfg.RabbitMQ.Exchange, cfg.RabbitMQ.Queue, logger)
+	if err != nil {
+		return nil, err
+	}
+	logger.Info("RabbitMQ publisher initialized successfully")
+	storageClient, err := storage.NewStorageClient(cfg.Storage, logger)
+	if err != nil {
+		return nil, err
+	}
+	logger.Info("Storage client initialized successfully")
 	return &AppResources{
-		logger:         logger,
 		postgresClient: postgresClient,
+		rabbitMqClient: rabbitMqClient,
+		storageClient:  storageClient,
+		logger:         logger,
 	}, nil
 }
 
@@ -120,6 +152,16 @@ func gracefulShutdown(app *fiber.App, resources *AppResources) {
 
 	closeResources("PostgresClient", func() error {
 		resources.postgresClient.Close()
+		return nil
+	})
+
+	closeResources("RabbitMQ", func() error {
+		resources.rabbitMqClient.Close()
+		return nil
+	})
+
+	closeResources("StorageClient", func() error {
+		resources.storageClient.Close()
 		return nil
 	})
 
