@@ -22,7 +22,7 @@ func NewMessagingPublisherImpl(msgPublishClient *MessagingPublisherClient, logge
 }
 
 func (m *MessagingPublisherImpl) Publish(ctx context.Context, exchange string, message []byte) error {
-	// Implementa la lógica para publicar el mensaje en RabbitMQ
+
 	return nil
 }
 
