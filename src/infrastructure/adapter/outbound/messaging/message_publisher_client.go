@@ -7,6 +7,12 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+const (
+	MediaImageResize    string = "media.image.resize"
+	MediaVideoTranscode string = "media.video.transcode"
+	MediaDocumentUpload string = "media.document.upload"
+)
+
 type MessagingPublisherClient struct {
 	connection      *amqp.Connection
 	channel         *amqp.Channel
@@ -60,9 +66,9 @@ func NewMessagingPublisherClient(url string, defaultExchange string, defaultQueu
 	}
 
 	routingKey := []string{
-		"media.image.resize",
-		"media.video.transcode",
-		"media.document.convert",
+		MediaImageResize,
+		MediaVideoTranscode,
+		MediaDocumentUpload,
 	}
 
 	for _, key := range routingKey {

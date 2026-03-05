@@ -32,6 +32,6 @@ func (m *MessagingPublisherImpl) PublishJson(ctx context.Context, exchange strin
 }
 
 func (m *MessagingPublisherImpl) EnqueueWork(ctx context.Context, eventName string, payload []byte) error {
-	// Implementa la lógica para encolar el trabajo en RabbitMQ
+
 	return nil
 }

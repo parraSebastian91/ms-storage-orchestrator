@@ -2,18 +2,18 @@ package dto
 
 type UploadFormDTO struct {
 	// ========== IDENTIFICACIÓN DEL USUARIO/PROPIETARIO ==========
-	UserUUID     string `form:"user_uuid" validate:"required,uuid4"`
-	CompanyID    string `form:"company_id" validate:"required,uuid4"`
-	DepartmentID string `form:"department_id" validate:"required,uuid4"`
+	UUID string `form:"uuid" validate:"required,uuid4"`
+	// CompanyID    string `form:"company_id" validate:"required,uuid4"`
+	// DepartmentID string `form:"department_id" validate:"required,uuid4"`
 
 	// ========== IDENTIFICACIÓN DE LA APLICACIÓN ==========
-	ApplicationID string `form:"application_id" validate:"required"` // ej: "ERP", "CMS", "BILLING"
-	ModuleID      string `form:"module_id" validate:"required"`      // ej: "invoices", "documents", "media"
-	ProcessType   string `form:"process_type" validate:"required"`   // ej: "invoice_upload", "video_transcode"
+	// ApplicationID string `form:"application_id" validate:"required"` // ej: "ERP", "CMS", "BILLING"
+	// ModuleID      string `form:"module_id" validate:"required"`      // ej: "invoices", "documents", "media"
+	// ProcessType   string `form:"process_type" validate:"required"`   // ej: "invoice_upload", "video_transcode"
 
 	// ========== IDENTIFICACIÓN DEL RECURSO/CONTEXTO ==========
-	ResourceID   string `form:"resource_id" validate:"required,uuid4"` // ej: invoice_id, order_id
-	ResourceType string `form:"resource_type" validate:"required"`     // ej: "invoice", "order", "contract"
+	// ResourceID   string `form:"resource_id" validate:"required,uuid4"` // ej: invoice_id, order_id
+	// ResourceType string `form:"resource_type" validate:"required"`     // ej: "invoice", "order", "contract"
 
 	// ========== DATOS DEL ARCHIVO ==========
 	FileName    string `form:"file_name" validate:"required"`
@@ -30,8 +30,8 @@ type UploadFormDTO struct {
 
 // Estructura para almacenar en BD (metadatos del archivo)
 type FileMetadata struct {
-	ID           string `json:"id" db:"id"` // UUID
-	UserUUID     string `json:"user_uuid" db:"user_uuid"`
+	ID           string `json:"id" db:"id"`     // UUID
+	UUID         string `json:"uuid" db:"uuid"` // UUID del usuario/propietario
 	CompanyID    string `json:"company_id" db:"company_id"`
 	ResourceID   string `json:"resource_id" db:"resource_id"`
 	ResourceType string `json:"resource_type" db:"resource_type"`
