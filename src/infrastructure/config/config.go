@@ -82,7 +82,7 @@ func InitConfig() *Config {
 			AccessKeyID:     getEnvOrDefault("STORAGE_ACCESS_KEY", "minioadmin"),
 			SecretAccessKey: getEnvOrDefault("STORAGE_SECRET_KEY", "minioadmin"),
 			UseSSL:          getEnvOrDefault("STORAGE_USE_SSL", "false") == "true",
-			BucketNameRaw:   getEnvOrDefault("STORAGE_BUCKET_NAME_RAW", "storage-bucket-raw"),
+			BucketNameRaw:   getEnvOrDefault("STORAGE_BUCKET_NAME_RAW", "seis-app"),
 		},
 	}
 }

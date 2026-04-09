@@ -1,5 +1,12 @@
 package dto
 
+type PresignedURLRequestDTO struct {
+	UUID        string `query:"uuid" validate:"required,uuid4"`
+	ObjectType  string `query:"object_type" validate:"required"`
+	FileName    string `query:"file_name" validate:"required"`
+	ContentType string `query:"content_type" validate:"required"`
+}
+
 type UploadFormDTO struct {
 	// ========== IDENTIFICACIÓN DEL USUARIO/PROPIETARIO ==========
 	UUID string `form:"uuid" validate:"required,uuid4"`

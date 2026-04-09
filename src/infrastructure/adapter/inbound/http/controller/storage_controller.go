@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/storageApplication/command"
@@ -121,4 +123,85 @@ func (c *StorageController) DeleteFile() {
 
 func (c *StorageController) ListFiles() {
 	// Lógica para manejar la lista de archivos
+}
+
+func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
+	c.logger.Info("Received request for presigned URL")
+	var presignedURLRequest dto.PresignedURLRequestDTO
+	if err := ctx.Bind().Query(&presignedURLRequest); err != nil {
+		c.logger.Error("Error al parsear la solicitud de URL prefirmada", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Faltan Datos en la Solicitud",
+		})
+	}
+
+	presignedURLRequest.UUID = strings.TrimSpace(presignedURLRequest.UUID)
+	presignedURLRequest.ObjectType = strings.TrimSpace(presignedURLRequest.ObjectType)
+	presignedURLRequest.FileName = strings.TrimSpace(presignedURLRequest.FileName)
+	presignedURLRequest.ContentType = strings.TrimSpace(presignedURLRequest.ContentType)
+
+	if presignedURLRequest.UUID == "" || presignedURLRequest.ObjectType == "" || presignedURLRequest.FileName == "" || presignedURLRequest.ContentType == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "uuid, object_type, file_name y content_type son requeridos",
+		})
+	}
+
+	url, err := c.storageApplication.GetPresignedPutURL(
+		ctx.Context(),
+		presignedURLRequest.UUID,
+		presignedURLRequest.ObjectType,
+		presignedURLRequest.FileName,
+		presignedURLRequest.ContentType,
+	)
+
+	if err != nil {
+		c.logger.Error("Error al obtener la URL prefirmada", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "No se pudo generar la URL prefirmada",
+		})
+	}
+	c.logger.Info("Presigned URL generated successfully", map[string]interface{}{
+		"uuid":       presignedURLRequest.UUID,
+		"objectType": presignedURLRequest.ObjectType,
+		"fileName":   presignedURLRequest.FileName,
+	})
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"url": url,
+	})
+
+}
+
+func (c *StorageController) MinioWebhookHandler(ctx fiber.Ctx) error {
+	c.logger.Info("Received MinIO webhook event", map[string]interface{}{
+		"body": string(ctx.Body()),
+	})
+	var event dto.MinIOEvent
+	if err := ctx.Bind().Body(&event); err != nil {
+		c.logger.Error("Error al parsear el evento de MinIO", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	c.logger.Info("Received MinIO webhook event", map[string]interface{}{
+		"event": event,
+	})
+
+	// Extraer datos y publicar en RabbitMQ
+	// for _, record := range event.Records {
+	// bucket := record.S3.Bucket.Name
+	// key := record.S3.Object.Key
+
+	// Aquí tu lógica de Go:
+	// 1. Identificar el AssetID desde el Key (o metadata)
+	// 2. Enviar mensaje a RabbitMQ para que Rust trabaje
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Webhook recibido correctamente",
+	})
 }

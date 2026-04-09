@@ -11,4 +11,5 @@ type IStorageApplicationUseCase interface {
 	DownloadFile(ctx context.Context, fileName string) ([]byte, error)
 	DeleteFile(ctx context.Context, fileName string) error
 	ListFiles(ctx context.Context) ([]string, error)
+	GetPresignedPutURL(ctx context.Context, uuid string, objectType string, fileName string, contentType string) (string, error)
 }

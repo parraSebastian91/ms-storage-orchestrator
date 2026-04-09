@@ -1,5 +1,15 @@
+# Development stage (hot-reload with go run, source mounted via volume)
+FROM golang:1.25-alpine AS development
+WORKDIR /app
+RUN apk add --no-cache git ca-certificates tzdata
+COPY go.mod go.sum* ./
+RUN go mod download
+COPY . .
+EXPOSE 3100
+CMD ["go", "run", "./cmd/api"]
+
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Install git and ca-certificates (needed for fetching dependencies)
 RUN apk add --no-cache git ca-certificates tzdata
@@ -44,12 +54,12 @@ RUN chown -R appuser:appuser /app
 # Switch to non-root user
 USER appuser
 
-# Expose port (ajusta según tu necesidad)
-EXPOSE 8080
+# Expose port
+EXPOSE 3100
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3100/health || exit 1
 
 # Run the application
 CMD ["./api"]

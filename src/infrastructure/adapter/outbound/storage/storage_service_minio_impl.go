@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/minio/minio-go/v7"
+	domainModels "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/models"
 	ports "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/outbound"
 )
 
@@ -126,4 +128,41 @@ func (c *StorageMinIOServiceImpl) ListFiles(ctx context.Context) ([]string, erro
 
 	fmt.Println("Listing files")
 	return []string{}, nil
+}
+
+func (c *StorageMinIOServiceImpl) GetPresignedURL(ctx context.Context, objectKey string, operation string) (string, error) {
+	if c == nil || c.storageClient == nil || c.storageClient.minioClient == nil {
+		return "", fmt.Errorf("storage client is not initialized")
+	}
+
+	if objectKey == "" {
+		return "", fmt.Errorf("object key is required")
+	}
+
+	switch operation {
+	case domainModels.STORAGE_OPERATION_PUT:
+		url, err := c.storageClient.minioClient.PresignedPutObject(ctx, c.storageClient.bucketNameRaw, objectKey, time.Duration(5)*time.Minute)
+		if err != nil {
+			c.logger.Error("Failed to generate presigned PUT URL", map[string]interface{}{
+				"bucket":    c.storageClient.bucketNameRaw,
+				"objectKey": objectKey,
+				"error":     err.Error(),
+			})
+			return "", err
+		}
+		return url.String(), nil
+	case domainModels.STORAGE_OPERATION_GET:
+		url, err := c.storageClient.minioClient.PresignedGetObject(ctx, c.storageClient.bucketNameRaw, objectKey, time.Duration(5)*time.Minute, c.storageClient.minioClient.EndpointURL().Query())
+		if err != nil {
+			c.logger.Error("Failed to generate presigned GET URL", map[string]interface{}{
+				"bucket":    c.storageClient.bucketNameRaw,
+				"objectKey": objectKey,
+				"error":     err.Error(),
+			})
+			return "", err
+		}
+		return url.String(), nil
+	default:
+		return "", fmt.Errorf("unsupported operation: %s", operation)
+	}
 }

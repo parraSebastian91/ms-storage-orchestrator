@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/storageApplication/command"
+	domainModels "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/models"
 	ports "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/outbound"
 )
 
@@ -79,4 +81,40 @@ func (sa *StorageApplication) DeleteFile(ctx context.Context, fileName string) e
 func (sa *StorageApplication) ListFiles(ctx context.Context) ([]string, error) {
 	// Lógica para listar los archivos disponibles en el servicio de almacenamiento
 	return nil, nil
+}
+
+func (sa *StorageApplication) GetPresignedPutURL(ctx context.Context, uuid string, objectType string, fileName string, contentType string) (string, error) {
+	uuid = strings.TrimSpace(uuid)
+	objectType = strings.TrimSpace(objectType)
+	fileName = strings.TrimSpace(fileName)
+	contentType = strings.TrimSpace(contentType)
+
+	if uuid == "" || objectType == "" || fileName == "" || contentType == "" {
+		return "", fmt.Errorf("uuid, objectType, fileName and contentType are required")
+	}
+
+	extension := strings.TrimPrefix(contentType, ".")
+	if strings.Contains(extension, "/") {
+		parts := strings.Split(extension, "/")
+		extension = parts[len(parts)-1]
+	}
+	if extension == "" {
+		return "", fmt.Errorf("invalid contentType")
+	}
+
+	var objectKey string
+	switch objectType {
+	case domainModels.USER_AVATAR:
+		objectKey = fmt.Sprintf(`profile-pictures/%s/%s/temp/%s-%d.%s`, uuid, domainModels.USER_AVATAR, fileName, time.Now().Unix(), extension)
+
+	case domainModels.USER_BANNER:
+		objectKey = fmt.Sprintf(`profile-pictures/%s/%s/temp/%s-%d.%s`, uuid, domainModels.USER_BANNER, fileName, time.Now().Unix(), extension)
+
+	case domainModels.DOCUMENT:
+		objectKey = fmt.Sprintf(`documents/%s/%s/temp/%s-%d.%s`, uuid, domainModels.DOCUMENT, fileName, time.Now().Unix(), extension)
+
+	default:
+		objectKey = fmt.Sprintf(`others/%s/%d-%s`, uuid, time.Now().Unix(), objectType)
+	}
+	return sa.storageService.GetPresignedURL(ctx, objectKey, domainModels.STORAGE_OPERATION_PUT)
 }
