@@ -9,7 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
-	storageapplication "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/storageApplication"
+	storageUseCase "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/useCase/storageApplication"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/controller"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/routes"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/outbound/database"
@@ -46,10 +46,11 @@ func main() {
 
 	messagingPublisher := messaging.NewMessagingPublisherImpl(resources.rabbitMqClient, resources.logger)
 	storageMinIOAdapterService := storage.NewStorageMinIOServiceImpl(resources.storageClient, resources.logger)
+	mediaRepositoryAdapter := database.NewMediaRepositoryAdapter(resources.postgresClient, resources.logger)
 
 	// ======== Inicializacion Aplication Use Cases ========
 
-	storageApplication := storageapplication.NewStorageApplication(storageMinIOAdapterService, messagingPublisher, resources.logger)
+	storageApplication := storageUseCase.NewStorageApplication(storageMinIOAdapterService, messagingPublisher, mediaRepositoryAdapter, resources.logger)
 
 	// ======== INICIALIZACION CONTROLADORES Y RUTAS ========
 

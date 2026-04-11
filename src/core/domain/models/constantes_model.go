@@ -1,9 +1,20 @@
 package domainModels
 
 const (
-	STORAGE_OPERATION_PUT = "putObject"
-	STORAGE_OPERATION_GET = "getObject"
-	USER_AVATAR           = "user-avatar"
-	USER_BANNER           = "user-banner"
-	DOCUMENT              = "documents"
+	STORAGE_OPERATION_PUT          = "putObject"
+	STORAGE_OPERATION_GET          = "getObject"
+	MEDIA_TYPE_IMAGE               = "IMAGE"
+	MEDIA_TYPE_VIDEO               = "VIDEO"
+	MEDIA_TYPE_DOCUMENT            = "DOCUMENT"
+	MEDIA_TYPE_ARCHIVE             = "ARCHIVE"
+	CATEGORY_PROCESS_USER_AVATAR   = "user-avatar"
+	CATEGORY_PROCESS_USER_BANNER   = "user-banner"
+	CATEGORY_PROCESS_DOCUMENT      = "document"
+	CATEGORY_PROCESS_SOCIAL_POST   = "social-post"
+	STATE_PROCESS_PENDING          = "PENDING"
+	STATE_PROCESS_UPLOADED         = "UPLOADED"
+	STATE_PROCESS_PROCESSING       = "PROCESSING"
+	STATE_PROCESS_READY            = "READY"
+	STATE_PROCESS_ERROR            = "ERROR"
+	STATE_PROCESS_UNSUPPORTED_TYPE = "UNSUPPORTED_TYPE"
 )

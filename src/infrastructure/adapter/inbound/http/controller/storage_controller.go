@@ -4,19 +4,19 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application"
-	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/storageApplication/command"
-	ports "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/outbound"
+	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/useCase/storageApplication/command"
+	inbound "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/inbound"
+	outbound "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/outbound"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/dto"
 )
 
 type StorageController struct {
-	storageApplication application.IStorageApplicationUseCase
-	logger             ports.ILoggerService
+	storageApplication inbound.IStorageUseCase
+	logger             outbound.ILoggerService
 }
 
 // NewStorageController crea una nueva instancia de StorageController
-func NewStorageController(storageApplication application.IStorageApplicationUseCase, logger ports.ILoggerService) *StorageController {
+func NewStorageController(storageApplication inbound.IStorageUseCase, logger outbound.ILoggerService) *StorageController {
 	return &StorageController{
 		storageApplication: storageApplication,
 		logger:             logger,
@@ -148,12 +148,14 @@ func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
 		})
 	}
 
-	url, err := c.storageApplication.GetPresignedPutURL(
+	url, err := c.storageApplication.ExecuteGetPresignedPutURL(
 		ctx.Context(),
-		presignedURLRequest.UUID,
-		presignedURLRequest.ObjectType,
-		presignedURLRequest.FileName,
-		presignedURLRequest.ContentType,
+		command.GetPresignedPutURLCommand{
+			UUID:        presignedURLRequest.UUID,
+			ObjectType:  presignedURLRequest.ObjectType,
+			FileName:    presignedURLRequest.FileName,
+			ContentType: presignedURLRequest.ContentType,
+		},
 	)
 
 	if err != nil {
@@ -192,6 +194,16 @@ func (c *StorageController) MinioWebhookHandler(ctx fiber.Ctx) error {
 		"event": event,
 	})
 
+	err := c.storageApplication.ExecuteProcessFile(ctx.Context(), event.Records[0].S3.Object.Key)
+
+	if err != nil {
+		c.logger.Error("Error al procesar el archivo desde el webhook de MinIO", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 	// Extraer datos y publicar en RabbitMQ
 	// for _, record := range event.Records {
 	// bucket := record.S3.Bucket.Name

@@ -1,7 +1,9 @@
 package messaging
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/observability"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -92,10 +94,57 @@ func NewMessagingPublisherClient(url string, defaultExchange string, defaultQueu
 		channel:         channel,
 		defaultExchange: defaultExchange,
 		defaultQueue:    defaultQueue,
+		logger:          logger,
 	}, nil
 }
 
+func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string, routingKey string, message []byte) error {
+	if exchange == "" {
+		exchange = m.defaultExchange
+	}
+
+	headers := amqp.Table{
+		"trace_id":    data.Header.TraceId,
+		"code":        data.Header.Code,
+		"name":        data.Header.Name,
+		"file_mime":   data.Header.FileMime,
+		"retry_count": data.Header.RetryCount,
+		"chunked":     data.Header.Chunked,
+		"chunk_index": data.Header.ChunkIndex,
+		"is_last":     data.Header.IsLast,
+		"backup":      data.Header.Backup,
+	}
+
+	fmt.Printf("Publishing message with headers: %v and routing key: %s\n", headers, routingKey)
+
+	err := r.channel.PublishWithContext(
+		ctx,
+		exchange,        // exchange
+		"upload.object", // routing key
+		false,           // mandatory
+		false,           // immediate
+		amqp.Publishing{
+			DeliveryMode: amqp.Persistent, // 2 = persistente
+			ContentType:  "application/octet-stream",
+			Body:         data.File.File,
+			Headers:      headers,
+			Timestamp:    time.Now(),
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to publish message: %w", err)
+	}
+
+	return nil
+}
+
 func (m *MessagingPublisherClient) Close() error {
-	// Implementa la lógica para cerrar cualquier conexión o recurso utilizado por el publisher
+	if m.channel != nil {
+		m.channel.Close()
+	}
+	if m.connection != nil {
+		m.connection.Close()
+	}
 	return nil
 }
