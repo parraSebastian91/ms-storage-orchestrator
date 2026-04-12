@@ -22,21 +22,17 @@ func NewMessagingPublisherImpl(queueClient *MessagingPublisherClient, logger por
 }
 
 func (m *MessagingPublisherImpl) PublishTypeImage(ctx context.Context, event AplicationModel.StorageModel) error {
-	m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, m.QueueClient.defaultExchange, []byte(event.StorageKey))
-	return nil
+	return m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, MediaImageResize, event)
 }
 
 func (m *MessagingPublisherImpl) PublishTypeVideo(ctx context.Context, event AplicationModel.StorageModel) error {
-	// Implementa la lógica para publicar el mensaje utilizando msgPublishClient
-	return nil
+	return m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, MediaVideoTranscode, event)
 }
 
 func (m *MessagingPublisherImpl) PublishTypeDocument(ctx context.Context, event AplicationModel.StorageModel) error {
-	// Implementa la lógica para publicar el mensaje utilizando msgPublishClient
-	return nil
+	return m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, MediaDocumentUpload, event)
 }
 
 func (m *MessagingPublisherImpl) PublishTypeArchive(ctx context.Context, event AplicationModel.StorageModel) error {
-	// Implementa la lógica para publicar el mensaje utilizando msgPublishClient
-	return nil
+	return m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, MediaDocumentUpload, event)
 }

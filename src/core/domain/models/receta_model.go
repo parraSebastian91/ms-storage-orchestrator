@@ -6,7 +6,7 @@ const (
 	TYPE_SIZE_LG = "lg"
 )
 
-var RECIPE_PRIORITY_HIGH = map[string]RecipeMediaModel{
+var RECIPE = map[string]RecipeMediaModel{
 	CATEGORY_PROCESS_USER_AVATAR: {
 		Name: "UserAvatar",
 		TargetSize: []MediaSizeModel{

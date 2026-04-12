@@ -2,8 +2,12 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 
+	"github.com/jackc/pgx/v5"
 	AplicationModel "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/model"
 	domainModels "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/models"
 	ports "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/outbound"
@@ -72,9 +76,56 @@ func (a *MediaRepositoryAdapter) CreateMediaMetadata(ctx context.Context, model 
 	return nil
 }
 
-func (a *MediaRepositoryAdapter) GetMediaMetadata(ctx context.Context, objkectKey string) (AplicationModel.StorageModel, error) {
+func (a *MediaRepositoryAdapter) GetMediaMetadata(ctx context.Context, objectKey string) (AplicationModel.StorageModel, error) {
 	if a == nil || a.postgresClient == nil || a.postgresClient.Pool == nil {
 		return AplicationModel.StorageModel{}, fmt.Errorf("postgres client is not initialized")
 	}
-	return AplicationModel.StorageModel{}, nil
+
+	normalizedKey := strings.TrimSpace(objectKey)
+	decodedKey, err := url.QueryUnescape(normalizedKey)
+	if err == nil {
+		normalizedKey = decodedKey
+	}
+
+	keysToTry := []string{normalizedKey}
+	if objectKey != normalizedKey {
+		keysToTry = append(keysToTry, strings.TrimSpace(objectKey))
+	}
+
+	query := `
+		SELECT 
+			id,
+			owner_id, 
+			m_type, 
+			category, 
+			original_name, 
+			mime_type, 
+			storage_key 
+		FROM 
+			media.media_assets
+		where 
+			storage_key = $1`
+
+	for _, key := range keysToTry {
+		row := a.postgresClient.Pool.QueryRow(ctx, query, key)
+		var mediaModel AplicationModel.StorageModel
+		err := row.Scan(
+			&mediaModel.AssetId,
+			&mediaModel.OwnerUUID,
+			&mediaModel.MediaType,
+			&mediaModel.CategoryProcess,
+			&mediaModel.NameFile,
+			&mediaModel.FormatFile,
+			&mediaModel.StorageKey,
+		)
+		if err == nil {
+			return mediaModel, nil
+		}
+
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return AplicationModel.StorageModel{}, err
+		}
+	}
+
+	return AplicationModel.StorageModel{}, pgx.ErrNoRows
 }

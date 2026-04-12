@@ -2,9 +2,12 @@ package messaging
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	AplicationModel "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/model"
+	domainModels "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/models"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/observability"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -98,35 +101,65 @@ func NewMessagingPublisherClient(url string, defaultExchange string, defaultQueu
 	}, nil
 }
 
-func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string, routingKey string, message []byte) error {
+func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string, routingKey string, event AplicationModel.StorageModel) error {
 	if exchange == "" {
 		exchange = m.defaultExchange
 	}
 
+	if routingKey == "" {
+		switch event.MediaType {
+		case domainModels.MEDIA_TYPE_IMAGE:
+			routingKey = MediaImageResize
+		case domainModels.MEDIA_TYPE_VIDEO:
+			routingKey = MediaVideoTranscode
+		case domainModels.MEDIA_TYPE_DOCUMENT:
+			routingKey = MediaDocumentUpload
+		default:
+			routingKey = MediaDocumentUpload
+		}
+	}
+
 	headers := amqp.Table{
-		"trace_id":    data.Header.TraceId,
-		"code":        data.Header.Code,
-		"name":        data.Header.Name,
-		"file_mime":   data.Header.FileMime,
-		"retry_count": data.Header.RetryCount,
-		"chunked":     data.Header.Chunked,
-		"chunk_index": data.Header.ChunkIndex,
-		"is_last":     data.Header.IsLast,
-		"backup":      data.Header.Backup,
+		"AssetId":       event.AssetId,
+		"owner_id":      event.OwnerUUID,
+		"media_type":    event.MediaType,
+		"category":      event.CategoryProcess,
+		"original_name": event.NameFile,
+		"storage_key":   event.StorageKey,
+	}
+
+	recipe, ok := domainModels.RECIPE[event.CategoryProcess]
+	if !ok {
+		m.logger.Error("Recipe not found for category process", map[string]interface{}{
+			"category": event.CategoryProcess,
+		})
+	}
+
+	type publishPayload struct {
+		Event  AplicationModel.StorageModel  `json:"event"`
+		Recipe domainModels.RecipeMediaModel `json:"recipe"`
+	}
+
+	body, err := json.Marshal(publishPayload{
+		Event:  event,
+		Recipe: recipe,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal publish payload: %w", err)
 	}
 
 	fmt.Printf("Publishing message with headers: %v and routing key: %s\n", headers, routingKey)
 
-	err := r.channel.PublishWithContext(
+	err = m.channel.PublishWithContext(
 		ctx,
-		exchange,        // exchange
-		"upload.object", // routing key
-		false,           // mandatory
-		false,           // immediate
+		exchange,
+		routingKey,
+		false,
+		false,
 		amqp.Publishing{
-			DeliveryMode: amqp.Persistent, // 2 = persistente
-			ContentType:  "application/octet-stream",
-			Body:         data.File.File,
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "application/json",
+			Body:         body,
 			Headers:      headers,
 			Timestamp:    time.Now(),
 		},
