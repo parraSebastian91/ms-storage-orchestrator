@@ -14,6 +14,7 @@ var RECIPE = map[string]RecipeMediaModel{
 			{Size: TYPE_SIZE_MD, Width: 500, Height: 500},
 			{Size: TYPE_SIZE_LG, Width: 1000, Height: 1000},
 		},
+		Radio:    1.0,
 		Format:   "webp",
 		Priority: 10,
 	},
@@ -25,21 +26,22 @@ var RECIPE = map[string]RecipeMediaModel{
 			{Size: TYPE_SIZE_LG, Width: 1200, Height: 400},
 		},
 		Format:   "webp",
+		Radio:    1.0,
 		Priority: 8,
 	},
 }
 
 type RecipeMediaModel struct {
-	Name       string
-	TargetSize []MediaSizeModel // ["sm", "md", "lg"]
-	Format     string           // "webp"
-	radio      float64
-	Priority   int
+	Name       string           `json:"name"`
+	TargetSize []MediaSizeModel `json:"target_size"` // ["sm", "md", "lg"]
+	Format     string           `json:"format"`      // "webp"
+	Radio      float64          `json:"radio"`
+	Priority   int              `json:"priority"`
 }
 type MediaSizeModel struct {
-	Size     string // "sm", "md", "lg"
-	Width    int
-	Height   int
-	Format   string // "webp"
-	Priority int
+	Size     string `json:"size"` // "sm", "md", "lg"
+	Width    int    `json:"width"`
+	Height   int    `json:"height"`
+	Format   string `json:"format"` // "webp"
+	Priority int    `json:"priority"`
 }

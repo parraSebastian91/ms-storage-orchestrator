@@ -119,14 +119,14 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 		}
 	}
 
-	headers := amqp.Table{
-		"AssetId":       event.AssetId,
-		"owner_id":      event.OwnerUUID,
-		"media_type":    event.MediaType,
-		"category":      event.CategoryProcess,
-		"original_name": event.NameFile,
-		"storage_key":   event.StorageKey,
-	}
+	// headers := amqp.Table{
+	// 	"AssetId":       event.AssetId,
+	// 	"owner_id":      event.OwnerUUID,
+	// 	"media_type":    event.MediaType,
+	// 	"category":      event.CategoryProcess,
+	// 	"original_name": event.NameFile,
+	// 	"storage_key":   event.StorageKey,
+	// }
 
 	recipe, ok := domainModels.RECIPE[event.CategoryProcess]
 	if !ok {
@@ -148,7 +148,9 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 		return fmt.Errorf("failed to marshal publish payload: %w", err)
 	}
 
-	fmt.Printf("Publishing message with headers: %v and routing key: %s\n", headers, routingKey)
+	fmt.Printf("Publishing message with routing key: %s\n", routingKey)
+	fmt.Printf("Publishing message with queue: %s\n", m.defaultQueue)
+	fmt.Printf("Publishing message with exchange: %s\n", exchange)
 
 	err = m.channel.PublishWithContext(
 		ctx,
@@ -160,8 +162,8 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "application/json",
 			Body:         body,
-			Headers:      headers,
-			Timestamp:    time.Now(),
+			// Headers:      headers,
+			Timestamp: time.Now(),
 		},
 	)
 
