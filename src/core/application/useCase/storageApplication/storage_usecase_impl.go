@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	AplicationModel "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/model"
@@ -21,6 +22,52 @@ type StorageUsecase struct {
 	messagePublisher outbound.IMessagePublisher
 	mediaRepository  outbound.IMediaRepository
 	logger           outbound.ILoggerService
+}
+
+var keyUnsafeCharsRegex = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+var fileNameUnsafeCharsRegex = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
+var repeatedUnderscoreRegex = regexp.MustCompile(`_+`)
+
+func sanitizeObjectKeySegment(value string) string {
+	v := strings.TrimSpace(value)
+	v = strings.ReplaceAll(v, " ", "_")
+	v = keyUnsafeCharsRegex.ReplaceAllString(v, "_")
+	v = repeatedUnderscoreRegex.ReplaceAllString(v, "_")
+	v = strings.Trim(v, "._-")
+	if v == "" {
+		return "file"
+	}
+	return v
+}
+
+func sanitizeFileNameForStorageAndDB(value string) string {
+	v := strings.ToValidUTF8(value, "")
+	v = strings.TrimSpace(v)
+	v = strings.ReplaceAll(v, " ", "_")
+	v = fileNameUnsafeCharsRegex.ReplaceAllString(v, "_")
+	v = repeatedUnderscoreRegex.ReplaceAllString(v, "_")
+	v = strings.Trim(v, "_-")
+	if v == "" {
+		return "file"
+	}
+	if len(v) > 120 {
+		v = v[:120]
+	}
+	return v
+}
+
+func sanitizeObjectKeyExtension(value string) string {
+	v := strings.TrimSpace(strings.TrimPrefix(value, "."))
+	if strings.Contains(v, "/") {
+		parts := strings.Split(v, "/")
+		v = parts[len(parts)-1]
+	}
+	v = sanitizeObjectKeySegment(v)
+	v = strings.ToLower(v)
+	if v == "file" {
+		return "bin"
+	}
+	return v
 }
 
 func NewStorageApplication(
@@ -75,6 +122,9 @@ func (sa *StorageUsecase) UploadFile(ctx context.Context, uploadFormDTO command.
 
 func (sa *StorageUsecase) ExecuteProcessFile(ctx context.Context, objectKey string) error {
 
+	sa.logger.Info("ExecuteProcessFile started", map[string]interface{}{
+		"objectKey": objectKey,
+	})
 	mediaModel, err := sa.mediaRepository.GetMediaMetadata(ctx, objectKey)
 	if err != nil {
 		sa.logger.Error("Failed to get media metadata", map[string]interface{}{
@@ -83,6 +133,9 @@ func (sa *StorageUsecase) ExecuteProcessFile(ctx context.Context, objectKey stri
 		})
 		return err
 	}
+	sa.logger.Info("Media metadata retrieved successfully", map[string]interface{}{
+		"correlationId": mediaModel.CorrelationId,
+	})
 
 	switch mediaModel.CategoryProcess {
 	case domainModels.CATEGORY_PROCESS_USER_AVATAR:
@@ -97,8 +150,8 @@ func (sa *StorageUsecase) ExecuteProcessFile(ctx context.Context, objectKey stri
 
 	if err != nil {
 		sa.logger.Error("Failed to publish message for file processing", map[string]interface{}{
-			"objectKey": objectKey,
-			"error":     err.Error(),
+			"correlationId": mediaModel.CorrelationId,
+			"error":         err.Error(),
 		})
 		return err
 	}
@@ -107,24 +160,36 @@ func (sa *StorageUsecase) ExecuteProcessFile(ctx context.Context, objectKey stri
 }
 
 func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command command.GetPresignedPutURLCommand) (string, error) {
+	start := time.Now()
 	uuidUser := strings.TrimSpace(command.UUID)
 	objectType := strings.TrimSpace(command.ObjectType)
-	re := regexp.MustCompile(`\\s+`)
-	fileName := strings.TrimSpace(re.ReplaceAllString(command.FileName, "_"))
+	fileName := sanitizeFileNameForStorageAndDB(command.FileName)
 	contentType := strings.TrimSpace(command.ContentType)
+	correlationId := strings.TrimSpace(command.CorrelationId)
 
-	if uuidUser == "" || objectType == "" || fileName == "" || contentType == "" {
+	sa.logger.Info("ExecuteGetPresignedPutURL started", map[string]interface{}{
+		"ownerId":       uuidUser,
+		"objectType":    objectType,
+		"contentType":   contentType,
+		"correlationId": correlationId,
+	})
+
+	if uuidUser == "" || objectType == "" || contentType == "" {
+		sa.logger.Warn("ExecuteGetPresignedPutURL validation failed", map[string]interface{}{
+			"ownerId":       uuidUser,
+			"objectType":    objectType,
+			"contentType":   contentType,
+			"correlationId": correlationId,
+		})
 		return "", fmt.Errorf("uuid, objectType, fileName and contentType are required")
 	}
 
-	extension := strings.TrimPrefix(contentType, ".")
-	if strings.Contains(extension, "/") {
-		parts := strings.Split(extension, "/")
-		extension = parts[len(parts)-1]
-	}
+	extension := sanitizeObjectKeyExtension(contentType)
 	if extension == "" {
 		return "", fmt.Errorf("invalid contentType")
 	}
+
+	safeObjectType := sanitizeObjectKeySegment(objectType)
 
 	var objectKey string
 	var category string
@@ -132,19 +197,19 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 	var uuidFile = uuid.New()
 	switch objectType {
 	case domainModels.CATEGORY_PROCESS_USER_AVATAR:
-		objectKey = fmt.Sprintf(`profile-pictures/%s/%s/temp/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_USER_AVATAR, fileName, uuidFile, extension)
+		objectKey = fmt.Sprintf(`private/profile-pictures/%s/%s/temp/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_USER_AVATAR, fileName, uuidFile, extension)
 		category = domainModels.CATEGORY_PROCESS_USER_AVATAR
 		mediaType = domainModels.MEDIA_TYPE_IMAGE
 	case domainModels.CATEGORY_PROCESS_USER_BANNER:
-		objectKey = fmt.Sprintf(`profile-pictures/%s/%s/temp/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_USER_BANNER, fileName, uuidFile, extension)
+		objectKey = fmt.Sprintf(`private/profile-pictures/%s/%s/temp/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_USER_BANNER, fileName, uuidFile, extension)
 		category = domainModels.CATEGORY_PROCESS_USER_BANNER
 		mediaType = domainModels.MEDIA_TYPE_IMAGE
 	case domainModels.CATEGORY_PROCESS_DOCUMENT:
-		objectKey = fmt.Sprintf(`documents/%s/%s/temp/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_DOCUMENT, fileName, uuidFile, extension)
+		objectKey = fmt.Sprintf(`private/documents/%s/%s/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_DOCUMENT, fileName, uuidFile, extension)
 		category = domainModels.CATEGORY_PROCESS_DOCUMENT
 		mediaType = domainModels.MEDIA_TYPE_DOCUMENT
 	default:
-		objectKey = fmt.Sprintf(`others/%s/%s-%s`, uuidUser, uuidFile, objectType)
+		objectKey = fmt.Sprintf(`private/others/%s/%s-%s`, uuidUser, uuidFile, safeObjectType)
 		category = "others"
 		mediaType = domainModels.MEDIA_TYPE_ARCHIVE
 	}
@@ -156,17 +221,46 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 		NameFile:        fileName,
 		FormatFile:      contentType,
 		StorageKey:      objectKey,
+		CorrelationId:   correlationId,
 	})
 	if err != nil {
 		sa.logger.Error("Failed to persist media metadata", map[string]interface{}{
-			"error":      err.Error(),
-			"ownerId":    uuidUser,
-			"mediaType":  mediaType,
-			"category":   category,
-			"storageKey": objectKey,
+			"error":         err.Error(),
+			"ownerId":       uuidUser,
+			"mediaType":     mediaType,
+			"category":      category,
+			"storageKey":    objectKey,
+			"correlationId": correlationId,
+			"durationMs":    time.Since(start).Milliseconds(),
 		})
 		return "", err
 	}
 
-	return sa.storageService.GetPresignedURL(ctx, objectKey, domainModels.STORAGE_OPERATION_PUT)
+	sa.logger.Info("Media metadata persisted", map[string]interface{}{
+		"ownerId":       uuidUser,
+		"mediaType":     mediaType,
+		"category":      category,
+		"storageKey":    objectKey,
+		"correlationId": correlationId,
+	})
+
+	presignedURL, err := sa.storageService.GetPresignedURL(ctx, objectKey, domainModels.STORAGE_OPERATION_PUT)
+	if err != nil {
+		sa.logger.Error("Failed to generate presigned URL", map[string]interface{}{
+			"error":         err.Error(),
+			"storageKey":    objectKey,
+			"correlationId": correlationId,
+			"durationMs":    time.Since(start).Milliseconds(),
+		})
+		return "", err
+	}
+
+	sa.logger.Info("ExecuteGetPresignedPutURL finished", map[string]interface{}{
+		"ownerId":       uuidUser,
+		"storageKey":    objectKey,
+		"correlationId": correlationId,
+		"durationMs":    time.Since(start).Milliseconds(),
+	})
+
+	return presignedURL, nil
 }

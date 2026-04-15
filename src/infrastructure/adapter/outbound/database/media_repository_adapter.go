@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	AplicationModel "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/model"
@@ -32,6 +33,15 @@ func (a *MediaRepositoryAdapter) CreateMediaMetadata(ctx context.Context, model 
 		return fmt.Errorf("postgres client is not initialized")
 	}
 
+	start := time.Now()
+	a.logger.Info("CreateMediaMetadata started", map[string]interface{}{
+		"ownerId":       model.OwnerUUID,
+		"mediaType":     model.MediaType,
+		"category":      model.CategoryProcess,
+		"storageKey":    model.StorageKey,
+		"correlationId": model.CorrelationId,
+	})
+
 	query := `
 		INSERT INTO media.media_assets (
 			owner_id,
@@ -40,8 +50,9 @@ func (a *MediaRepositoryAdapter) CreateMediaMetadata(ctx context.Context, model 
 			status,
 			original_name,
 			mime_type,
-			storage_key
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			storage_key,
+			correlation_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	_, err := a.postgresClient.Pool.Exec(
@@ -54,23 +65,28 @@ func (a *MediaRepositoryAdapter) CreateMediaMetadata(ctx context.Context, model 
 		model.NameFile,
 		model.FormatFile,
 		model.StorageKey,
+		model.CorrelationId,
 	)
 	if err != nil {
 		a.logger.Error("Failed to create media metadata", map[string]interface{}{
-			"error":      err.Error(),
-			"ownerId":    model.OwnerUUID,
-			"mediaType":  model.MediaType,
-			"category":   model.CategoryProcess,
-			"storageKey": model.StorageKey,
+			"error":         err.Error(),
+			"ownerId":       model.OwnerUUID,
+			"mediaType":     model.MediaType,
+			"category":      model.CategoryProcess,
+			"storageKey":    model.StorageKey,
+			"correlationId": model.CorrelationId,
+			"durationMs":    time.Since(start).Milliseconds(),
 		})
 		return err
 	}
 
 	a.logger.Info("Media metadata created successfully", map[string]interface{}{
-		"ownerId":    model.OwnerUUID,
-		"mediaType":  model.MediaType,
-		"category":   model.CategoryProcess,
-		"storageKey": model.StorageKey,
+		"ownerId":       model.OwnerUUID,
+		"mediaType":     model.MediaType,
+		"category":      model.CategoryProcess,
+		"storageKey":    model.StorageKey,
+		"correlationId": model.CorrelationId,
+		"durationMs":    time.Since(start).Milliseconds(),
 	})
 
 	return nil
@@ -80,6 +96,8 @@ func (a *MediaRepositoryAdapter) GetMediaMetadata(ctx context.Context, objectKey
 	if a == nil || a.postgresClient == nil || a.postgresClient.Pool == nil {
 		return AplicationModel.StorageModel{}, fmt.Errorf("postgres client is not initialized")
 	}
+
+	start := time.Now()
 
 	normalizedKey := strings.TrimSpace(objectKey)
 	decodedKey, err := url.QueryUnescape(normalizedKey)
@@ -100,7 +118,8 @@ func (a *MediaRepositoryAdapter) GetMediaMetadata(ctx context.Context, objectKey
 			category, 
 			original_name, 
 			mime_type, 
-			storage_key 
+			storage_key,
+			correlation_id 
 		FROM 
 			media.media_assets
 		where 
@@ -117,15 +136,31 @@ func (a *MediaRepositoryAdapter) GetMediaMetadata(ctx context.Context, objectKey
 			&mediaModel.NameFile,
 			&mediaModel.FormatFile,
 			&mediaModel.StorageKey,
+			&mediaModel.CorrelationId,
 		)
 		if err == nil {
+			a.logger.Info("GetMediaMetadata found record", map[string]interface{}{
+				"storageKey":    key,
+				"assetId":       mediaModel.AssetId,
+				"correlationId": mediaModel.CorrelationId,
+				"durationMs":    time.Since(start).Milliseconds(),
+			})
 			return mediaModel, nil
 		}
 
 		if !errors.Is(err, pgx.ErrNoRows) {
+			a.logger.Error("GetMediaMetadata query failed", map[string]interface{}{
+				"error":      err.Error(),
+				"storageKey": key,
+			})
 			return AplicationModel.StorageModel{}, err
 		}
 	}
+
+	a.logger.Warn("GetMediaMetadata no rows", map[string]interface{}{
+		"storageKey": normalizedKey,
+		"durationMs": time.Since(start).Milliseconds(),
+	})
 
 	return AplicationModel.StorageModel{}, pgx.ErrNoRows
 }

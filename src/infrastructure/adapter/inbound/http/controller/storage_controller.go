@@ -2,6 +2,7 @@ package controller
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/useCase/storageApplication/command"
@@ -126,16 +127,28 @@ func (c *StorageController) ListFiles() {
 }
 
 func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
-	c.logger.Info("Received request for presigned URL")
+	start := time.Now()
 	var presignedURLRequest dto.PresignedURLRequestDTO
 	if err := ctx.Bind().Query(&presignedURLRequest); err != nil {
 		c.logger.Error("Error al parsear la solicitud de URL prefirmada", map[string]interface{}{
 			"error": err.Error(),
+			"path":  ctx.Path(),
 		})
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Faltan Datos en la Solicitud",
 		})
 	}
+
+	correlationId := strings.TrimSpace(ctx.Get("X-Correlation-Id"))
+	if correlationId == "" {
+		correlationId = "N/A"
+	}
+
+	c.logger.Info("Presigned URL request received", map[string]interface{}{
+		"correlationId": correlationId,
+		"path":          ctx.Path(),
+		"method":        ctx.Method(),
+	})
 
 	presignedURLRequest.UUID = strings.TrimSpace(presignedURLRequest.UUID)
 	presignedURLRequest.ObjectType = strings.TrimSpace(presignedURLRequest.ObjectType)
@@ -143,6 +156,12 @@ func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
 	presignedURLRequest.ContentType = strings.TrimSpace(presignedURLRequest.ContentType)
 
 	if presignedURLRequest.UUID == "" || presignedURLRequest.ObjectType == "" || presignedURLRequest.FileName == "" || presignedURLRequest.ContentType == "" {
+		c.logger.Warn("Presigned URL request validation failed", map[string]interface{}{
+			"correlationId": correlationId,
+			"uuid":          presignedURLRequest.UUID,
+			"objectType":    presignedURLRequest.ObjectType,
+			"contentType":   presignedURLRequest.ContentType,
+		})
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "uuid, object_type, file_name y content_type son requeridos",
 		})
@@ -151,25 +170,31 @@ func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
 	url, err := c.storageApplication.ExecuteGetPresignedPutURL(
 		ctx.Context(),
 		command.GetPresignedPutURLCommand{
-			UUID:        presignedURLRequest.UUID,
-			ObjectType:  presignedURLRequest.ObjectType,
-			FileName:    presignedURLRequest.FileName,
-			ContentType: presignedURLRequest.ContentType,
+			UUID:          presignedURLRequest.UUID,
+			ObjectType:    presignedURLRequest.ObjectType,
+			FileName:      presignedURLRequest.FileName,
+			ContentType:   presignedURLRequest.ContentType,
+			CorrelationId: correlationId,
 		},
 	)
 
 	if err != nil {
 		c.logger.Error("Error al obtener la URL prefirmada", map[string]interface{}{
-			"error": err.Error(),
+			"error":         err.Error(),
+			"correlationId": correlationId,
+			"durationMs":    time.Since(start).Milliseconds(),
 		})
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "No se pudo generar la URL prefirmada",
 		})
 	}
 	c.logger.Info("Presigned URL generated successfully", map[string]interface{}{
-		"uuid":       presignedURLRequest.UUID,
-		"objectType": presignedURLRequest.ObjectType,
-		"fileName":   presignedURLRequest.FileName,
+		"uuid":            presignedURLRequest.UUID,
+		"objectType":      presignedURLRequest.ObjectType,
+		"fileName":        presignedURLRequest.FileName,
+		"correlationId":   correlationId,
+		"durationMs":      time.Since(start).Milliseconds(),
+		"presignedUrlSet": url != "",
 	})
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"url": url,
@@ -204,6 +229,7 @@ func (c *StorageController) MinioWebhookHandler(ctx fiber.Ctx) error {
 			"error": err.Error(),
 		})
 	}
+
 	// Extraer datos y publicar en RabbitMQ
 	// for _, record := range event.Records {
 	// bucket := record.S3.Bucket.Name

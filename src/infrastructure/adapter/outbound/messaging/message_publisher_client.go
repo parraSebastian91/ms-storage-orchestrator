@@ -102,6 +102,10 @@ func NewMessagingPublisherClient(url string, defaultExchange string, defaultQueu
 }
 
 func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string, routingKey string, event AplicationModel.StorageModel) error {
+	m.logger.Info("Publishing message to RabbitMQ", map[string]interface{}{
+		"routingKey":    routingKey,
+		"correlationId": event.CorrelationId,
+	})
 	if exchange == "" {
 		exchange = m.defaultExchange
 	}
@@ -127,26 +131,29 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 	recipe, ok := domainModels.RECIPE[event.CategoryProcess]
 	if !ok {
 		m.logger.Error("Recipe not found for category process", map[string]interface{}{
-			"category": event.CategoryProcess,
+			"category":      event.CategoryProcess,
+			"correlationId": event.CorrelationId,
 		})
 	}
 
 	type publishPayload struct {
-		Event  AplicationModel.StorageModel  `json:"event"`
-		Recipe domainModels.RecipeMediaModel `json:"recipe"`
+		Event         AplicationModel.StorageModel  `json:"event"`
+		Recipe        domainModels.RecipeMediaModel `json:"recipe"`
+		CorrelationId string                        `json:"correlation_id"`
 	}
 
 	body, err := json.Marshal(publishPayload{
-		Event:  event,
-		Recipe: recipe,
+		Event:         event,
+		Recipe:        recipe,
+		CorrelationId: event.CorrelationId,
 	})
 	if err != nil {
+		m.logger.Error("Failed to marshal publish payload", map[string]interface{}{
+			"correlationId": event.CorrelationId,
+			"error":         err.Error(),
+		})
 		return fmt.Errorf("failed to marshal publish payload: %w", err)
 	}
-
-	fmt.Printf("Publishing message with routing key: %s\n", routingKey)
-	fmt.Printf("Publishing message with queue: %s\n", m.defaultQueue)
-	fmt.Printf("Publishing message with exchange: %s\n", exchange)
 
 	err = m.channel.PublishWithContext(
 		ctx,
@@ -164,9 +171,16 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 	)
 
 	if err != nil {
+		m.logger.Error("Failed to publish message", map[string]interface{}{
+			"correlationId": event.CorrelationId,
+			"error":         err.Error(),
+		})
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
-
+	m.logger.Info("Message published successfully", map[string]interface{}{
+		"routingKey":    routingKey,
+		"correlationId": event.CorrelationId,
+	})
 	return nil
 }
 

@@ -8,4 +8,5 @@ type StorageModel struct {
 	NameFile        string `json:"name_file"`
 	FormatFile      string `json:"format_file"`
 	StorageKey      string `json:"storage_key"`
+	CorrelationId   string `json:"correlation_id"`
 }
