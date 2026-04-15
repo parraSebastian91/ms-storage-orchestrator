@@ -119,14 +119,10 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 		}
 	}
 
-	// headers := amqp.Table{
-	// 	"AssetId":       event.AssetId,
-	// 	"owner_id":      event.OwnerUUID,
-	// 	"media_type":    event.MediaType,
-	// 	"category":      event.CategoryProcess,
-	// 	"original_name": event.NameFile,
-	// 	"storage_key":   event.StorageKey,
-	// }
+	headers := amqp.Table{
+		"retry_count": 0,
+		"requeue":     true,
+	}
 
 	recipe, ok := domainModels.RECIPE[event.CategoryProcess]
 	if !ok {
@@ -162,8 +158,8 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "application/json",
 			Body:         body,
-			// Headers:      headers,
-			Timestamp: time.Now(),
+			Headers:      headers,
+			Timestamp:    time.Now(),
 		},
 	)
 
