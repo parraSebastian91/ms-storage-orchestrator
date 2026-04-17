@@ -8,9 +8,10 @@ import (
 )
 
 type StorageClient struct {
-	minioClient   *minio.Client
-	logger        *observability.CustomLogger
-	bucketNameRaw string
+	minioClient    *minio.Client
+	logger         *observability.CustomLogger
+	bucketNameRaw  string
+	publicEndpoint string // host:port o scheme://host:port visible por el browser
 }
 
 func NewStorageClient(cfg config.StorageConfig, logger *observability.CustomLogger) (*StorageClient, error) {
@@ -28,9 +29,10 @@ func NewStorageClient(cfg config.StorageConfig, logger *observability.CustomLogg
 		"endpoint": cfg.Endpoint,
 	})
 	return &StorageClient{
-		minioClient:   minioClient,
-		logger:        logger,
-		bucketNameRaw: cfg.BucketNameRaw,
+		minioClient:    minioClient,
+		logger:         logger,
+		bucketNameRaw:  cfg.BucketNameRaw,
+		publicEndpoint: cfg.PublicEndpoint,
 	}, nil
 }
 

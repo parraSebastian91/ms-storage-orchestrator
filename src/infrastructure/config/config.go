@@ -43,6 +43,7 @@ type RabbitMQConfig struct {
 
 type StorageConfig struct {
 	Endpoint        string
+	PublicEndpoint  string // URL pública visible por el browser (para presigned URLs)
 	AccessKeyID     string
 	SecretAccessKey string
 	UseSSL          bool
@@ -79,6 +80,7 @@ func InitConfig() *Config {
 		},
 		Storage: StorageConfig{
 			Endpoint:        getEnvOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
+			PublicEndpoint:  getEnvOrDefault("STORAGE_PUBLIC_ENDPOINT", ""),
 			AccessKeyID:     getEnvOrDefault("STORAGE_ACCESS_KEY", "minioadmin"),
 			SecretAccessKey: getEnvOrDefault("STORAGE_SECRET_KEY", "minioadmin"),
 			UseSSL:          getEnvOrDefault("STORAGE_USE_SSL", "false") == "true",
