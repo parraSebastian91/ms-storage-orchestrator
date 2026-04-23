@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -131,30 +130,12 @@ func (c *StorageMinIOServiceImpl) ListFiles(ctx context.Context) ([]string, erro
 	return []string{}, nil
 }
 
-// applyPublicEndpoint reemplaza scheme+host de una presigned URL con el endpoint
-// público configurado (STORAGE_PUBLIC_ENDPOINT), de modo que el browser reciba
-// una URL que pueda resolver (e.g. http://localhost:9000) en lugar del
-// hostname interno Docker (e.g. minio:9000).
-func (c *StorageMinIOServiceImpl) applyPublicEndpoint(u *url.URL) *url.URL {
-	public := c.storageClient.publicEndpoint
-	if public == "" {
-		return u
-	}
-	// Normalizar: añadir scheme si falta para que url.Parse funcione
-	if len(public) > 0 && public[0] != 'h' {
-		public = "http://" + public
-	}
-	pubURL, err := url.Parse(public)
-	if err != nil {
-		return u
-	}
-	u.Scheme = pubURL.Scheme
-	u.Host = pubURL.Host
-	return u
-}
-
 func (c *StorageMinIOServiceImpl) GetPresignedURL(ctx context.Context, objectKey string, operation string) (string, error) {
-	if c == nil || c.storageClient == nil || c.storageClient.minioClient == nil {
+	c.logger.Info("Generating presigned URL", map[string]interface{}{
+		"objectKey": objectKey,
+		"operation": operation,
+	})
+	if c == nil || c.storageClient == nil || c.storageClient.presignClient == nil {
 		return "", fmt.Errorf("storage client is not initialized")
 	}
 
@@ -164,7 +145,7 @@ func (c *StorageMinIOServiceImpl) GetPresignedURL(ctx context.Context, objectKey
 
 	switch operation {
 	case domainModels.STORAGE_OPERATION_PUT:
-		presigned, err := c.storageClient.minioClient.PresignedPutObject(ctx, c.storageClient.bucketNameRaw, objectKey, time.Duration(5)*time.Minute)
+		presigned, err := c.storageClient.presignClient.PresignedPutObject(ctx, c.storageClient.bucketNameRaw, objectKey, time.Duration(5)*time.Minute)
 		if err != nil {
 			c.logger.Error("Failed to generate presigned PUT URL", map[string]interface{}{
 				"bucket":    c.storageClient.bucketNameRaw,
@@ -173,9 +154,9 @@ func (c *StorageMinIOServiceImpl) GetPresignedURL(ctx context.Context, objectKey
 			})
 			return "", err
 		}
-		return c.applyPublicEndpoint(presigned).String(), nil
+		return presigned.String(), nil
 	case domainModels.STORAGE_OPERATION_GET:
-		presigned, err := c.storageClient.minioClient.PresignedGetObject(ctx, c.storageClient.bucketNameRaw, objectKey, time.Duration(5)*time.Minute, c.storageClient.minioClient.EndpointURL().Query())
+		presigned, err := c.storageClient.presignClient.PresignedGetObject(ctx, c.storageClient.bucketNameRaw, objectKey, time.Duration(5)*time.Minute, c.storageClient.presignClient.EndpointURL().Query())
 		if err != nil {
 			c.logger.Error("Failed to generate presigned GET URL", map[string]interface{}{
 				"bucket":    c.storageClient.bucketNameRaw,
@@ -184,7 +165,7 @@ func (c *StorageMinIOServiceImpl) GetPresignedURL(ctx context.Context, objectKey
 			})
 			return "", err
 		}
-		return c.applyPublicEndpoint(presigned).String(), nil
+		return presigned.String(), nil
 	default:
 		return "", fmt.Errorf("unsupported operation: %s", operation)
 	}

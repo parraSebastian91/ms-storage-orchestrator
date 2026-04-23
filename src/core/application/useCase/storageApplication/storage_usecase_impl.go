@@ -142,7 +142,7 @@ func (sa *StorageUsecase) ExecuteProcessFile(ctx context.Context, objectKey stri
 		err = sa.messagePublisher.PublishTypeImage(ctx, mediaModel)
 	case domainModels.CATEGORY_PROCESS_USER_BANNER:
 		err = sa.messagePublisher.PublishTypeImage(ctx, mediaModel)
-	case domainModels.CATEGORY_PROCESS_DOCUMENT:
+	case domainModels.CATEGORY_PROCESS_DOCUMENT_DTO:
 		err = sa.messagePublisher.PublishTypeDocument(ctx, mediaModel)
 	default:
 		err = sa.messagePublisher.PublishTypeArchive(ctx, mediaModel)
@@ -204,9 +204,9 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 		objectKey = fmt.Sprintf(`private/profile-pictures/%s/%s/temp/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_USER_BANNER, fileName, uuidFile, extension)
 		category = domainModels.CATEGORY_PROCESS_USER_BANNER
 		mediaType = domainModels.MEDIA_TYPE_IMAGE
-	case domainModels.CATEGORY_PROCESS_DOCUMENT:
-		objectKey = fmt.Sprintf(`private/documents/%s/%s/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_DOCUMENT, fileName, uuidFile, extension)
-		category = domainModels.CATEGORY_PROCESS_DOCUMENT
+	case domainModels.CATEGORY_PROCESS_DOCUMENT_DTO:
+		objectKey = fmt.Sprintf(`private/documents/%s/%s/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_DOCUMENT_DTO, fileName, uuidFile, extension)
+		category = domainModels.CATEGORY_PROCESS_DOCUMENT_DTO
 		mediaType = domainModels.MEDIA_TYPE_DOCUMENT
 	default:
 		objectKey = fmt.Sprintf(`private/others/%s/%s-%s`, uuidUser, uuidFile, safeObjectType)

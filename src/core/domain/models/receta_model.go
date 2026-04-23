@@ -6,7 +6,7 @@ const (
 	TYPE_SIZE_LG = "lg"
 )
 
-var RECIPE = map[string]RecipeMediaModel{
+var RECIPE_IMAGE = map[string]RecipeMediaModel{
 	CATEGORY_PROCESS_USER_AVATAR: {
 		Name: "UserAvatar",
 		TargetSize: []MediaSizeModel{
@@ -29,6 +29,20 @@ var RECIPE = map[string]RecipeMediaModel{
 		Radio:    1.0,
 		Priority: 8,
 	},
+}
+
+var RECIPE_DOCUMENT = map[string]DocumentRecipeModel{
+	CATEGORY_PROCESS_DOCUMENT_DTO: {
+		Name:        "DocumentUpload",
+		OcrLanguage: "spa+eng",
+		Category:    CATEGORY_PROCESS_DOCUMENT_DTO,
+	},
+}
+
+type DocumentRecipeModel struct {
+	Name        string `json:"name"`
+	OcrLanguage string `json:"ocr_language"`
+	Category    string `json:"category"`
 }
 
 type RecipeMediaModel struct {

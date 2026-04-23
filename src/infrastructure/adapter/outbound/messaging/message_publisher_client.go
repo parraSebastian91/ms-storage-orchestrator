@@ -109,16 +109,35 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 	if exchange == "" {
 		exchange = m.defaultExchange
 	}
+	var recipe interface{}
+	var ok bool
 
-	if routingKey == "" {
-		switch event.MediaType {
-		case domainModels.MEDIA_TYPE_IMAGE:
+	// La receta se selecciona SIEMPRE, independiente de si el routing key ya viene definido
+	switch event.MediaType {
+	case domainModels.MEDIA_TYPE_IMAGE:
+		recipe, ok = domainModels.RECIPE_IMAGE[event.CategoryProcess]
+		if !ok {
+			recipe, ok = domainModels.RECIPE_IMAGE[domainModels.CATEGORY_PROCESS_USER_AVATAR]
+		}
+		if routingKey == "" {
 			routingKey = MediaImageResize
-		case domainModels.MEDIA_TYPE_VIDEO:
+		}
+	case domainModels.MEDIA_TYPE_VIDEO:
+		ok = true
+		if routingKey == "" {
 			routingKey = MediaVideoTranscode
-		case domainModels.MEDIA_TYPE_DOCUMENT:
+		}
+	case domainModels.MEDIA_TYPE_DOCUMENT:
+		recipe, ok = domainModels.RECIPE_DOCUMENT[event.CategoryProcess]
+		if !ok {
+			recipe, ok = domainModels.RECIPE_DOCUMENT[domainModels.CATEGORY_PROCESS_DOCUMENT_DTO]
+		}
+		if routingKey == "" {
 			routingKey = MediaDocumentUpload
-		default:
+		}
+	default:
+		ok = true
+		if routingKey == "" {
 			routingKey = MediaDocumentUpload
 		}
 	}
@@ -128,7 +147,6 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 		"requeue":     true,
 	}
 
-	recipe, ok := domainModels.RECIPE[event.CategoryProcess]
 	if !ok {
 		m.logger.Error("Recipe not found for category process", map[string]interface{}{
 			"category":      event.CategoryProcess,
@@ -137,9 +155,9 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 	}
 
 	type publishPayload struct {
-		Event         AplicationModel.StorageModel  `json:"event"`
-		Recipe        domainModels.RecipeMediaModel `json:"recipe"`
-		CorrelationId string                        `json:"correlation_id"`
+		Event         AplicationModel.StorageModel `json:"event"`
+		Recipe        interface{}                  `json:"recipe"`
+		CorrelationId string                       `json:"correlation_id"`
 	}
 
 	body, err := json.Marshal(publishPayload{
