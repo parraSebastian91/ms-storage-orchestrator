@@ -243,3 +243,26 @@ func (c *StorageController) MinioWebhookHandler(ctx fiber.Ctx) error {
 		"message": "Webhook recibido correctamente",
 	})
 }
+
+func (c *StorageController) NotifyFileProcessedHandler(ctx fiber.Ctx) error {
+	c.logger.Info("Received file processed notification", map[string]interface{}{
+		"body": string(ctx.Body()),
+	})
+	var notification dto.NotifyProcessDTO
+	if err := ctx.Bind().Body(&notification); err != nil {
+		c.logger.Error("Error al parsear la notificación de archivo procesado", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	c.logger.Info("Received file processed notification", map[string]interface{}{
+		"notification": notification,
+	})
+	// Aquí puedes agregar lógica adicional si es necesario
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Notificación recibida correctamente",
+	})
+}

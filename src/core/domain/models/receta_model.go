@@ -34,7 +34,7 @@ var RECIPE_IMAGE = map[string]RecipeMediaModel{
 var RECIPE_DOCUMENT = map[string]DocumentRecipeModel{
 	CATEGORY_PROCESS_DOCUMENT_DTO: {
 		Name:        "DocumentUpload",
-		OcrLanguage: "spa+eng",
+		OcrLanguage: "spa",
 		Category:    CATEGORY_PROCESS_DOCUMENT_DTO,
 	},
 }

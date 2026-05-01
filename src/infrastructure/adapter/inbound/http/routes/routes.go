@@ -13,5 +13,6 @@ func SetupRoutes(app *fiber.App, storageController *controller.StorageController
 
 	webhook := app.Group("/webhooks")
 	webhook.Post("/minio", storageController.MinioWebhookHandler)
+	webhook.Put("/notify", storageController.NotifyFileProcessedHandler)
 	//api.Get("/download/:objectName", storageController.DownloadFile)
 }
