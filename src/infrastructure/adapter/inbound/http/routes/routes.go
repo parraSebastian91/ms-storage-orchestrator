@@ -6,6 +6,9 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, storageController *controller.StorageController) {
+	healthcheckController := controller.NewHealthcheckController()
+
+	app.Get("/health", healthcheckController.Check)
 
 	api := app.Group("/api/v1")
 	api.Post("/upload", storageController.UploadFile)
