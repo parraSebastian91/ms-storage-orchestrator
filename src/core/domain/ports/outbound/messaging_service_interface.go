@@ -11,6 +11,7 @@ type IMessagePublisher interface {
 	PublishTypeVideo(ctx context.Context, message AplicationModel.StorageModel) error
 	PublishTypeDocument(ctx context.Context, message AplicationModel.StorageModel) error
 	PublishTypeArchive(ctx context.Context, message AplicationModel.StorageModel) error
+	PublishDteProcessNotification(ctx context.Context, message AplicationModel.NotifyModel) error
 }
 
 type IWorkPublisher interface {

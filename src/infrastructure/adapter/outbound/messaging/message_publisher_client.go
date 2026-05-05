@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	MediaImageResize    string = "media.image.resize"
-	MediaVideoTranscode string = "media.video.transcode"
-	MediaDocumentUpload string = "media.document.upload"
+	MediaImageResize       string = "media.image.resize"
+	MediaVideoTranscode    string = "media.video.transcode"
+	MediaDocumentUpload    string = "media.document.upload"
+	DteProcessNotification string = "dte.process.notification"
 )
 
 type MessagingPublisherClient struct {

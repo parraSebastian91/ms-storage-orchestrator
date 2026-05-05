@@ -159,6 +159,33 @@ func (sa *StorageUsecase) ExecuteProcessFile(ctx context.Context, objectKey stri
 	return nil
 }
 
+func (sa *StorageUsecase) ExecuteNotifyProcessObject(ctx context.Context, notifyModel AplicationModel.NotifyModel) error {
+	start := time.Now()
+	sa.logger.Info("ExecuteNotifyProcessObject started", map[string]interface{}{
+		"CategoryProcess": notifyModel.Category,
+		"correlationId":   notifyModel.CorrelationId,
+	})
+
+	switch notifyModel.Category {
+	case domainModels.CATEGORY_PROCESS_DOCUMENT_DTO:
+		err := sa.messagePublisher.PublishDteProcessNotification(ctx, notifyModel)
+		if err != nil {
+			sa.logger.Error("Failed to publish DTE process notification", map[string]interface{}{
+				"correlationId": notifyModel.CorrelationId,
+				"error":         err.Error(),
+			})
+			return err
+		}
+	}
+
+	sa.logger.Info("ExecuteNotifyProcessObject finished", map[string]interface{}{
+		"CategoryProcess": notifyModel.Category,
+		"correlationId":   notifyModel.CorrelationId,
+		"durationMs":      time.Since(start).Milliseconds(),
+	})
+	return nil
+}
+
 func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command command.GetPresignedPutURLCommand) (string, error) {
 	start := time.Now()
 	uuidUser := strings.TrimSpace(command.UUID)

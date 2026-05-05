@@ -1,10 +1,12 @@
 package controller
 
 import (
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	AplicationModel "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/model"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/useCase/storageApplication/command"
 	inbound "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/inbound"
 	outbound "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/outbound"
@@ -218,15 +220,56 @@ func (c *StorageController) MinioWebhookHandler(ctx fiber.Ctx) error {
 	c.logger.Info("Received MinIO webhook event", map[string]interface{}{
 		"event": event,
 	})
-
-	err := c.storageApplication.ExecuteProcessFile(ctx.Context(), event.Records[0].S3.Object.Key)
-
-	if err != nil {
-		c.logger.Error("Error al procesar el archivo desde el webhook de MinIO", map[string]interface{}{
-			"error": err.Error(),
+	if len(event.Records) == 0 {
+		c.logger.Warn("MinIO webhook recibido sin records", map[string]interface{}{})
+		return ctx.Status(fiber.StatusAccepted).JSON(fiber.Map{
+			"message": "Webhook recibido sin records",
 		})
+	}
+
+	processed := 0
+	failed := make([]string, 0)
+
+	for _, record := range event.Records {
+		objectKey := strings.TrimSpace(record.S3.Object.Key)
+		if objectKey == "" {
+			c.logger.Warn("Record MinIO sin object key", map[string]interface{}{
+				"bucket": record.S3.Bucket.Name,
+			})
+			continue
+		}
+
+		decodedKey, decodeErr := url.QueryUnescape(objectKey)
+		if decodeErr == nil {
+			objectKey = decodedKey
+		}
+
+		directory := extractTopLevelDirectory(objectKey)
+		if err := c.storageApplication.ExecuteProcessFile(ctx.Context(), objectKey); err != nil {
+			failed = append(failed, objectKey)
+			c.logger.Error("Error al procesar el archivo desde el webhook de MinIO", map[string]interface{}{
+				"error":     err.Error(),
+				"objectKey": objectKey,
+				"directory": directory,
+				"bucket":    record.S3.Bucket.Name,
+			})
+			continue
+		}
+
+		processed++
+		c.logger.Info("Archivo encolado desde webhook MinIO", map[string]interface{}{
+			"objectKey": objectKey,
+			"directory": directory,
+			"bucket":    record.S3.Bucket.Name,
+		})
+	}
+
+	if len(failed) > 0 {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+			"message":         "Webhook procesado con errores parciales",
+			"processed_count": processed,
+			"failed_count":    len(failed),
+			"failed_objects":  failed,
 		})
 	}
 
@@ -240,8 +283,23 @@ func (c *StorageController) MinioWebhookHandler(ctx fiber.Ctx) error {
 	// 2. Enviar mensaje a RabbitMQ para que Rust trabaje
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Webhook recibido correctamente",
+		"message":         "Webhook recibido correctamente",
+		"processed_count": processed,
 	})
+}
+
+func extractTopLevelDirectory(objectKey string) string {
+	key := strings.Trim(objectKey, "/")
+	if key == "" {
+		return "root"
+	}
+
+	parts := strings.Split(key, "/")
+	if len(parts) == 1 {
+		return "root"
+	}
+
+	return parts[0]
 }
 
 func (c *StorageController) NotifyFileProcessedHandler(ctx fiber.Ctx) error {
@@ -260,7 +318,29 @@ func (c *StorageController) NotifyFileProcessedHandler(ctx fiber.Ctx) error {
 	c.logger.Info("Received file processed notification", map[string]interface{}{
 		"notification": notification,
 	})
-	// Aquí puedes agregar lógica adicional si es necesario
+
+	notifyModel := AplicationModel.NotifyModel{
+		Category:      notification.Category,
+		Status:        notification.Status,
+		Timestamp:     notification.Timestamp,
+		CorrelationId: notification.CorrelationId,
+		App:           notification.App,
+		Payload: AplicationModel.NotifyPayload{
+			NumeroFactura: notification.Payload.NumeroFactura,
+			RutDeudor:     notification.Payload.RutDeudor,
+			NombreDeudor:  notification.Payload.NombreDeudor,
+			MontoTotal:    notification.Payload.MontoTotal,
+		},
+	}
+
+	if err := c.storageApplication.ExecuteNotifyProcessObject(ctx.Context(), notifyModel); err != nil {
+		c.logger.Error("Error al procesar la notificación de archivo procesado", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Notificación recibida correctamente",
