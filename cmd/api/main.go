@@ -77,7 +77,7 @@ func InitResources(cfg *config.Config) (*AppResources, error) {
 		return nil, err
 	}
 	logger.Info("Postgres client initialized successfully")
-	rabbitMqClient, err := messaging.NewMessagingPublisherClient(cfg.RabbitMQ.URL, cfg.RabbitMQ.Exchange, cfg.RabbitMQ.Queue, logger)
+	rabbitMqClient, err := messaging.NewMessagingPublisherClient(cfg.RabbitMQ.URL, cfg.RabbitMQ.Exchange, cfg.RabbitMQ.RoutingKeys, logger)
 	if err != nil {
 		return nil, err
 	}

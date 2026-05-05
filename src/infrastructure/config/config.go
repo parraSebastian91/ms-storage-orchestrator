@@ -35,10 +35,29 @@ type PostgresConfig struct {
 	MaxConns string
 }
 
+type RoutingKeysConfig struct {
+	MediaImageResize       string
+	MediaVideoTranscode    string
+	MediaDocumentUpload    string
+	DteProcessNotification string
+}
+
+type ExchangeConfig struct {
+	ExchangeTask         string
+	ExchangeNotification string
+}
+
 type RabbitMQConfig struct {
-	URL      string
-	Exchange string
-	Queue    string
+	URL         string
+	Exchange    ExchangeConfig
+	RoutingKeys RoutingKeysConfig
+}
+
+type StorageBucketConfig struct {
+	PublicOriginal   string
+	PublicProcessed  string
+	PrivateOriginal  string
+	PrivateProcessed string
 }
 
 type StorageConfig struct {
@@ -47,7 +66,7 @@ type StorageConfig struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	UseSSL          bool
-	BucketNameRaw   string
+	Buckets         StorageBucketConfig
 }
 
 func InitConfig() *Config {
@@ -74,9 +93,17 @@ func InitConfig() *Config {
 			CorsConfig:  getCorsConfig(getEnvOrDefault("ENV", "development")),
 		},
 		RabbitMQ: RabbitMQConfig{
-			URL:      getEnvOrDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
-			Exchange: getEnvOrDefault("RABBITMQ_EXCHANGE", "storage_task_exchange"),
-			Queue:    getEnvOrDefault("RABBITMQ_QUEUE", "storage_tasks"),
+			URL: getEnvOrDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
+			Exchange: ExchangeConfig{
+				ExchangeTask:         getEnvOrDefault("RABBITMQ_EXCHANGE_TASK", "storage_tasks_exchange"),
+				ExchangeNotification: getEnvOrDefault("RABBITMQ_EXCHANGE_NOTIFICATION", "storage_notifications_exchange"),
+			},
+			RoutingKeys: RoutingKeysConfig{
+				MediaImageResize:       getEnvOrDefault("RABBITMQ_KEY_MEDIA_IMAGE_RESIZE", "media.image.resize"),
+				MediaVideoTranscode:    getEnvOrDefault("RABBITMQ_KEY_MEDIA_VIDEO_TRANSCODE", "media.video.transcode"),
+				MediaDocumentUpload:    getEnvOrDefault("RABBITMQ_KEY_MEDIA_DOCUMENT_UPLOAD", "media.document.upload"),
+				DteProcessNotification: getEnvOrDefault("RABBITMQ_KEY_DTE_PROCESS_NOTIFICATION", "dte.process.notification"),
+			},
 		},
 		Storage: StorageConfig{
 			Endpoint:        getEnvOrDefault("STORAGE_ENDPOINT", "localhost:9000"),
@@ -84,7 +111,12 @@ func InitConfig() *Config {
 			AccessKeyID:     getEnvOrDefault("STORAGE_ACCESS_KEY", "minioadmin"),
 			SecretAccessKey: getEnvOrDefault("STORAGE_SECRET_KEY", "minioadmin"),
 			UseSSL:          getEnvOrDefault("STORAGE_USE_SSL", "false") == "true",
-			BucketNameRaw:   getEnvOrDefault("STORAGE_BUCKET_NAME_RAW", "seis-app"),
+			Buckets: StorageBucketConfig{
+				PublicOriginal:   getEnvOrDefault("STORAGE_BUCKET_PUBLIC_ORIGINAL", "seis-app-public-original"),
+				PublicProcessed:  getEnvOrDefault("STORAGE_BUCKET_PUBLIC_PROCESSED", "seis-app-public-processed"),
+				PrivateOriginal:  getEnvOrDefault("STORAGE_BUCKET_PRIVATE_ORIGINAL", "seis-app-private-original"),
+				PrivateProcessed: getEnvOrDefault("STORAGE_BUCKET_PRIVATE_PROCESSED", "seis-app-private-processed"),
+			},
 		},
 	}
 }

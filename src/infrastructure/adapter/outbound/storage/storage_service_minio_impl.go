@@ -35,7 +35,7 @@ func (c *StorageMinIOServiceImpl) UploadFile(ctx context.Context, fileName strin
 		})
 		_, err := c.storageClient.minioClient.PutObject(
 			ctx,
-			c.storageClient.bucketNameRaw,
+			c.storageClient.buckets.PrivateOriginal,
 			fileName,
 			fileContent,
 			size,
@@ -67,7 +67,7 @@ func (c *StorageMinIOServiceImpl) UploadFile(ctx context.Context, fileName strin
 
 	_, err = c.storageClient.minioClient.PutObject(
 		ctx,
-		c.storageClient.bucketNameRaw,
+		c.storageClient.buckets.PrivateOriginal,
 		fileName,
 		io.NopCloser(bytes.NewReader(data)), // reader desde bytes
 		int64(len(data)),                    // tamaño conocido
@@ -145,10 +145,10 @@ func (c *StorageMinIOServiceImpl) GetPresignedURL(ctx context.Context, objectKey
 
 	switch operation {
 	case domainModels.STORAGE_OPERATION_PUT:
-		presigned, err := c.storageClient.presignClient.PresignedPutObject(ctx, c.storageClient.bucketNameRaw, objectKey, time.Duration(5)*time.Minute)
+		presigned, err := c.storageClient.presignClient.PresignedPutObject(ctx, c.storageClient.buckets.PrivateOriginal, objectKey, time.Duration(5)*time.Minute)
 		if err != nil {
 			c.logger.Error("Failed to generate presigned PUT URL", map[string]interface{}{
-				"bucket":    c.storageClient.bucketNameRaw,
+				"bucket":    c.storageClient.buckets.PrivateOriginal,
 				"objectKey": objectKey,
 				"error":     err.Error(),
 			})
@@ -156,10 +156,10 @@ func (c *StorageMinIOServiceImpl) GetPresignedURL(ctx context.Context, objectKey
 		}
 		return presigned.String(), nil
 	case domainModels.STORAGE_OPERATION_GET:
-		presigned, err := c.storageClient.presignClient.PresignedGetObject(ctx, c.storageClient.bucketNameRaw, objectKey, time.Duration(5)*time.Minute, c.storageClient.presignClient.EndpointURL().Query())
+		presigned, err := c.storageClient.presignClient.PresignedGetObject(ctx, c.storageClient.buckets.PrivateOriginal, objectKey, time.Duration(5)*time.Minute, c.storageClient.presignClient.EndpointURL().Query())
 		if err != nil {
 			c.logger.Error("Failed to generate presigned GET URL", map[string]interface{}{
-				"bucket":    c.storageClient.bucketNameRaw,
+				"bucket":    c.storageClient.buckets.PrivateOriginal,
 				"objectKey": objectKey,
 				"error":     err.Error(),
 			})

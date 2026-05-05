@@ -15,7 +15,7 @@ type StorageClient struct {
 	minioClient    *minio.Client
 	presignClient  *minio.Client
 	logger         *observability.CustomLogger
-	bucketNameRaw  string
+	buckets        config.StorageBucketConfig
 	publicEndpoint string // host:port o scheme://host:port visible por el browser
 }
 
@@ -98,7 +98,7 @@ func NewStorageClient(cfg config.StorageConfig, logger *observability.CustomLogg
 		minioClient:    minioClient,
 		presignClient:  presignClient,
 		logger:         logger,
-		bucketNameRaw:  cfg.BucketNameRaw,
+		buckets:        cfg.Buckets,
 		publicEndpoint: cfg.PublicEndpoint,
 	}, nil
 }

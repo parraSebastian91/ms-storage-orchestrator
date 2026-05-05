@@ -22,21 +22,21 @@ func NewMessagingPublisherImpl(queueClient *MessagingPublisherClient, logger por
 }
 
 func (m *MessagingPublisherImpl) PublishTypeImage(ctx context.Context, event AplicationModel.StorageModel) error {
-	return m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, MediaImageResize, event)
+	return m.QueueClient.PublishTask(ctx, m.QueueClient.RoutingKeys.MediaImageResize, event)
 }
 
 func (m *MessagingPublisherImpl) PublishTypeVideo(ctx context.Context, event AplicationModel.StorageModel) error {
-	return m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, MediaVideoTranscode, event)
+	return m.QueueClient.PublishTask(ctx, m.QueueClient.RoutingKeys.MediaVideoTranscode, event)
 }
 
 func (m *MessagingPublisherImpl) PublishTypeDocument(ctx context.Context, event AplicationModel.StorageModel) error {
-	return m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, MediaDocumentUpload, event)
+	return m.QueueClient.PublishTask(ctx, m.QueueClient.RoutingKeys.MediaDocumentUpload, event)
 }
 
 func (m *MessagingPublisherImpl) PublishTypeArchive(ctx context.Context, event AplicationModel.StorageModel) error {
-	return m.QueueClient.Publish(ctx, m.QueueClient.defaultExchange, MediaDocumentUpload, event)
+	return m.QueueClient.PublishTask(ctx, m.QueueClient.RoutingKeys.MediaDocumentUpload, event)
 }
 
 func (m *MessagingPublisherImpl) PublishDteProcessNotification(ctx context.Context, event AplicationModel.NotifyModel) error {
-	return m.QueueClient.PublishNotification(ctx, m.QueueClient.defaultExchange, DteProcessNotification, event)
+	return m.QueueClient.PublishNotification(ctx, event)
 }
