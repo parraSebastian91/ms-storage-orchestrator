@@ -203,6 +203,64 @@ func (m *MessagingPublisherClient) Publish(ctx context.Context, exchange string,
 	return nil
 }
 
+func (m *MessagingPublisherClient) PublishNotification(ctx context.Context, exchange string, routingKey string, event AplicationModel.NotifyModel) error {
+	m.logger.Info("Publishing notification message to RabbitMQ", map[string]interface{}{
+		"routingKey":    routingKey,
+		"correlationId": event.CorrelationId,
+	})
+	if exchange == "" {
+		exchange = m.defaultExchange
+	}
+
+	if routingKey == "" {
+		routingKey = DteProcessNotification
+	}
+
+	type publishPayload struct {
+		Event         AplicationModel.NotifyModel `json:"event"`
+		CorrelationId string                      `json:"correlation_id"`
+	}
+
+	body, err := json.Marshal(publishPayload{
+		Event:         event,
+		CorrelationId: event.CorrelationId,
+	})
+	if err != nil {
+		m.logger.Error("Failed to marshal publish payload", map[string]interface{}{
+			"correlationId": event.CorrelationId,
+			"error":         err.Error(),
+		})
+		return fmt.Errorf("failed to marshal publish payload: %w", err)
+	}
+
+	err = m.channel.PublishWithContext(
+		ctx,
+		exchange,
+		routingKey,
+		false,
+		false,
+		amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "application/json",
+			Body:         body,
+			Timestamp:    time.Now(),
+		},
+	)
+
+	if err != nil {
+		m.logger.Error("Failed to publish notification message", map[string]interface{}{
+			"correlationId": event.CorrelationId,
+			"error":         err.Error(),
+		})
+		return fmt.Errorf("failed to publish notification message: %w", err)
+	}
+	m.logger.Info("Notification message published successfully", map[string]interface{}{
+		"routingKey":    routingKey,
+		"correlationId": event.CorrelationId,
+	})
+	return nil
+}
+
 func (m *MessagingPublisherClient) Close() error {
 	if m.channel != nil {
 		m.channel.Close()

@@ -176,6 +176,11 @@ func (sa *StorageUsecase) ExecuteNotifyProcessObject(ctx context.Context, notify
 			})
 			return err
 		}
+	default:
+		sa.logger.Warn("No specific notification handler for category, skipping", map[string]interface{}{
+			"CategoryProcess": notifyModel.Category,
+			"correlationId":   notifyModel.CorrelationId,
+		})
 	}
 
 	sa.logger.Info("ExecuteNotifyProcessObject finished", map[string]interface{}{
