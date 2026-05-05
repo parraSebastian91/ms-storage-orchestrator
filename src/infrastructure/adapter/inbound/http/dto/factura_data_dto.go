@@ -1,4 +1,4 @@
-package dto
+package inbound_dto
 
 type FacturaDataDTO struct {
 	NumeroFactura []string `json:"numero_factura"`

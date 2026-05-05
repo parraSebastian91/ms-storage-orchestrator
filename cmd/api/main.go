@@ -13,6 +13,7 @@ import (
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/controller"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/routes"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/outbound/database"
+	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/outbound/external_services"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/outbound/messaging"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/outbound/storage"
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/config"
@@ -47,10 +48,11 @@ func main() {
 	messagingPublisher := messaging.NewMessagingPublisherImpl(resources.rabbitMqClient, resources.logger)
 	storageMinIOAdapterService := storage.NewStorageMinIOServiceImpl(resources.storageClient, resources.logger)
 	mediaRepositoryAdapter := database.NewMediaRepositoryAdapter(resources.postgresClient, resources.logger)
+	externalServiceAdapter := external_services.NewExternalService(cfg.ExternalService)
 
 	// ======== Inicializacion Aplication Use Cases ========
 
-	storageApplication := storageUseCase.NewStorageApplication(storageMinIOAdapterService, messagingPublisher, mediaRepositoryAdapter, resources.logger)
+	storageApplication := storageUseCase.NewStorageApplication(storageMinIOAdapterService, messagingPublisher, mediaRepositoryAdapter, externalServiceAdapter, resources.logger)
 
 	// ======== INICIALIZACION CONTROLADORES Y RUTAS ========
 

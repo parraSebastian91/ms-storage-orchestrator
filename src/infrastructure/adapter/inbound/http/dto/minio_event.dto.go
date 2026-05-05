@@ -1,4 +1,4 @@
-package dto
+package inbound_dto
 
 type MinIOEvent struct {
 	Records []struct {

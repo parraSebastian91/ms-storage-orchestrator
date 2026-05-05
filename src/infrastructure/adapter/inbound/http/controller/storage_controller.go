@@ -10,7 +10,7 @@ import (
 	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/application/useCase/storageApplication/command"
 	inbound "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/inbound"
 	outbound "github.com/parraSebastian91/ms-storage-orchestrator.git/src/core/domain/ports/outbound"
-	"github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/dto"
+	inbound_dto "github.com/parraSebastian91/ms-storage-orchestrator.git/src/infrastructure/adapter/inbound/http/dto"
 )
 
 type StorageController struct {
@@ -26,7 +26,7 @@ func NewStorageController(storageApplication inbound.IStorageUseCase, logger out
 	}
 }
 func (uc *StorageController) UploadFile(ctx fiber.Ctx) error {
-	var UploadFormDTO dto.UploadFormDTO
+	var UploadFormDTO inbound_dto.UploadFormDTO
 
 	if errUuid := ctx.Bind().Query(&UploadFormDTO); errUuid != nil {
 		uc.logger.Error("Error al bindear el formulario", map[string]interface{}{
@@ -130,7 +130,7 @@ func (c *StorageController) ListFiles() {
 
 func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
 	start := time.Now()
-	var presignedURLRequest dto.PresignedURLRequestDTO
+	var presignedURLRequest inbound_dto.PresignedURLRequestDTO
 	if err := ctx.Bind().Query(&presignedURLRequest); err != nil {
 		c.logger.Error("Error al parsear la solicitud de URL prefirmada", map[string]interface{}{
 			"error": err.Error(),
@@ -208,7 +208,7 @@ func (c *StorageController) MinioWebhookHandler(ctx fiber.Ctx) error {
 	c.logger.Info("Received MinIO webhook event", map[string]interface{}{
 		"body": string(ctx.Body()),
 	})
-	var event dto.MinIOEvent
+	var event inbound_dto.MinIOEvent
 	if err := ctx.Bind().Body(&event); err != nil {
 		c.logger.Error("Error al parsear el evento de MinIO", map[string]interface{}{
 			"error": err.Error(),
@@ -306,7 +306,7 @@ func (c *StorageController) NotifyFileProcessedHandler(ctx fiber.Ctx) error {
 	c.logger.Info("Received file processed notification", map[string]interface{}{
 		"body": string(ctx.Body()),
 	})
-	var notification dto.NotifyProcessDTO
+	var notification inbound_dto.NotifyProcessDTO
 	if err := ctx.Bind().Body(&notification); err != nil {
 		c.logger.Error("Error al parsear la notificación de archivo procesado", map[string]interface{}{
 			"error": err.Error(),

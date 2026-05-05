@@ -11,10 +11,11 @@ import (
 )
 
 type Config struct {
-	Postgres PostgresConfig
-	Server   ServerConfig
-	RabbitMQ RabbitMQConfig
-	Storage  StorageConfig
+	Postgres        PostgresConfig
+	Server          ServerConfig
+	RabbitMQ        RabbitMQConfig
+	Storage         StorageConfig
+	ExternalService ExternalServiceConfig
 }
 
 type ServerConfig struct {
@@ -69,6 +70,11 @@ type StorageConfig struct {
 	Buckets         StorageBucketConfig
 }
 
+type ExternalServiceConfig struct {
+	BaseURL string
+	Timeout time.Duration
+}
+
 func InitConfig() *Config {
 	// Cargar archivo .env (ignorar error en producción)
 	if err := godotenv.Load(".env.dev"); err != nil {
@@ -117,6 +123,10 @@ func InitConfig() *Config {
 				PrivateOriginal:  getEnvOrDefault("STORAGE_BUCKET_PRIVATE_ORIGINAL", "seis-app-private-original"),
 				PrivateProcessed: getEnvOrDefault("STORAGE_BUCKET_PRIVATE_PROCESSED", "seis-app-private-processed"),
 			},
+		},
+		ExternalService: ExternalServiceConfig{
+			BaseURL: getEnvOrDefault("EXTERNAL_SERVICE_BASE_URL", "http://localhost:8081"),
+			Timeout: 5 * time.Second,
 		},
 	}
 }

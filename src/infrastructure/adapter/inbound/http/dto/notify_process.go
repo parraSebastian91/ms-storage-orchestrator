@@ -1,4 +1,4 @@
-package dto
+package inbound_dto
 
 type NotifyProcessDTO struct {
 	Category      string         `json:"category" validate:"required"`

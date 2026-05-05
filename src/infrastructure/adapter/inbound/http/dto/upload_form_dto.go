@@ -1,4 +1,4 @@
-package dto
+package inbound_dto
 
 type PresignedURLRequestDTO struct {
 	UUID        string `query:"uuid" validate:"required,uuid4"`

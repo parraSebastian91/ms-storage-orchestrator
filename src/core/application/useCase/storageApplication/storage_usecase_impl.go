@@ -21,6 +21,7 @@ type StorageUsecase struct {
 	storageService   outbound.IStorageService
 	messagePublisher outbound.IMessagePublisher
 	mediaRepository  outbound.IMediaRepository
+	externalService  outbound.IExternalService
 	logger           outbound.ILoggerService
 }
 
@@ -74,12 +75,14 @@ func NewStorageApplication(
 	storageService outbound.IStorageService,
 	messagePublisher outbound.IMessagePublisher,
 	mediaRepository outbound.IMediaRepository,
+	externalService outbound.IExternalService,
 	logger outbound.ILoggerService,
 ) *StorageUsecase {
 	return &StorageUsecase{
 		storageService:   storageService,
 		messagePublisher: messagePublisher,
 		mediaRepository:  mediaRepository,
+		externalService:  externalService,
 		logger:           logger,
 	}
 }
@@ -168,14 +171,7 @@ func (sa *StorageUsecase) ExecuteNotifyProcessObject(ctx context.Context, notify
 
 	switch notifyModel.Category {
 	case domainModels.CATEGORY_PROCESS_DOCUMENT_DTO:
-		err := sa.messagePublisher.PublishDteProcessNotification(ctx, notifyModel)
-		if err != nil {
-			sa.logger.Error("Failed to publish DTE process notification", map[string]interface{}{
-				"correlationId": notifyModel.CorrelationId,
-				"error":         err.Error(),
-			})
-			return err
-		}
+
 	default:
 		sa.logger.Warn("No specific notification handler for category, skipping", map[string]interface{}{
 			"CategoryProcess": notifyModel.Category,
