@@ -163,6 +163,7 @@ func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
 			"uuid":          presignedURLRequest.UUID,
 			"objectType":    presignedURLRequest.ObjectType,
 			"contentType":   presignedURLRequest.ContentType,
+			"organization":  presignedURLRequest.Organization,
 		})
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "uuid, object_type, file_name y content_type son requeridos",
@@ -177,6 +178,7 @@ func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
 			FileName:      presignedURLRequest.FileName,
 			ContentType:   presignedURLRequest.ContentType,
 			CorrelationId: correlationId,
+			Organization:  presignedURLRequest.Organization,
 		},
 	)
 
@@ -324,7 +326,8 @@ func (c *StorageController) NotifyFileProcessedHandler(ctx fiber.Ctx) error {
 		Status:        notification.Status,
 		Timestamp:     notification.Timestamp,
 		CorrelationId: notification.CorrelationId,
-		App:           notification.App,
+		OwnerUUID:     notification.OwnerUUID,
+		App:           "storage-orchestrator",
 		Payload: AplicationModel.NotifyPayload{
 			NumeroFactura: notification.Payload.NumeroFactura,
 			RutDeudor:     notification.Payload.RutDeudor,

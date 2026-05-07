@@ -11,11 +11,11 @@ import (
 )
 
 type Config struct {
-	Postgres        PostgresConfig
-	Server          ServerConfig
-	RabbitMQ        RabbitMQConfig
-	Storage         StorageConfig
-	ExternalService ExternalServiceConfig
+	Postgres            PostgresConfig
+	Server              ServerConfig
+	RabbitMQ            RabbitMQConfig
+	Storage             StorageConfig
+	ExternalCoreService ExternalServiceConfig
 }
 
 type ServerConfig struct {
@@ -124,8 +124,8 @@ func InitConfig() *Config {
 				PrivateProcessed: getEnvOrDefault("STORAGE_BUCKET_PRIVATE_PROCESSED", "seis-app-private-processed"),
 			},
 		},
-		ExternalService: ExternalServiceConfig{
-			BaseURL: getEnvOrDefault("EXTERNAL_SERVICE_BASE_URL", "http://localhost:8081"),
+		ExternalCoreService: ExternalServiceConfig{
+			BaseURL: getEnvOrDefault("CORE_SERVICE_BASE_URL", "http://ms_core:3001"),
 			Timeout: 5 * time.Second,
 		},
 	}

@@ -171,7 +171,13 @@ func (sa *StorageUsecase) ExecuteNotifyProcessObject(ctx context.Context, notify
 
 	switch notifyModel.Category {
 	case domainModels.CATEGORY_PROCESS_DOCUMENT_DTO:
-
+		err := sa.externalService.CallNotifyCoreService(ctx, notifyModel)
+		if err != nil {
+			sa.logger.Error("Failed to notify core service for document", map[string]interface{}{
+				"correlationId": notifyModel.CorrelationId,
+				"error":         err.Error(),
+			})
+		}
 	default:
 		sa.logger.Warn("No specific notification handler for category, skipping", map[string]interface{}{
 			"CategoryProcess": notifyModel.Category,
@@ -189,25 +195,28 @@ func (sa *StorageUsecase) ExecuteNotifyProcessObject(ctx context.Context, notify
 
 func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command command.GetPresignedPutURLCommand) (string, error) {
 	start := time.Now()
-	uuidUser := strings.TrimSpace(command.UUID)
+	OwnerUUID := strings.TrimSpace(command.UUID)
 	objectType := strings.TrimSpace(command.ObjectType)
 	fileName := sanitizeFileNameForStorageAndDB(command.FileName)
 	contentType := strings.TrimSpace(command.ContentType)
 	correlationId := strings.TrimSpace(command.CorrelationId)
+	organization := strings.TrimSpace(command.Organization)
 
 	sa.logger.Info("ExecuteGetPresignedPutURL started", map[string]interface{}{
-		"ownerId":       uuidUser,
+		"ownerId":       OwnerUUID,
 		"objectType":    objectType,
 		"contentType":   contentType,
 		"correlationId": correlationId,
+		"organization":  organization,
 	})
 
-	if uuidUser == "" || objectType == "" || contentType == "" {
+	if OwnerUUID == "" || objectType == "" || contentType == "" {
 		sa.logger.Warn("ExecuteGetPresignedPutURL validation failed", map[string]interface{}{
-			"ownerId":       uuidUser,
+			"ownerId":       OwnerUUID,
 			"objectType":    objectType,
 			"contentType":   contentType,
 			"correlationId": correlationId,
+			"organization":  organization,
 		})
 		return "", fmt.Errorf("uuid, objectType, fileName and contentType are required")
 	}
@@ -225,25 +234,26 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 	var uuidFile = uuid.New()
 	switch objectType {
 	case domainModels.CATEGORY_PROCESS_USER_AVATAR:
-		objectKey = fmt.Sprintf(`private/profile-pictures/%s/%s/temp/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_USER_AVATAR, fileName, uuidFile, extension)
+		objectKey = fmt.Sprintf(`private/profile-pictures/%s/%s/temp/%s-%s.%s`, OwnerUUID, domainModels.CATEGORY_PROCESS_USER_AVATAR, fileName, uuidFile, extension)
 		category = domainModels.CATEGORY_PROCESS_USER_AVATAR
 		mediaType = domainModels.MEDIA_TYPE_IMAGE
 	case domainModels.CATEGORY_PROCESS_USER_BANNER:
-		objectKey = fmt.Sprintf(`private/profile-pictures/%s/%s/temp/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_USER_BANNER, fileName, uuidFile, extension)
+		objectKey = fmt.Sprintf(`private/profile-pictures/%s/%s/temp/%s-%s.%s`, OwnerUUID, domainModels.CATEGORY_PROCESS_USER_BANNER, fileName, uuidFile, extension)
 		category = domainModels.CATEGORY_PROCESS_USER_BANNER
 		mediaType = domainModels.MEDIA_TYPE_IMAGE
 	case domainModels.CATEGORY_PROCESS_DOCUMENT_DTO:
-		objectKey = fmt.Sprintf(`private/documents/%s/%s/%s-%s.%s`, uuidUser, domainModels.CATEGORY_PROCESS_DOCUMENT_DTO, fileName, uuidFile, extension)
+		OwnerUUID = organization
+		objectKey = fmt.Sprintf(`private/org-documents/%s/%s/%s-%s.%s`, OwnerUUID, domainModels.CATEGORY_PROCESS_DOCUMENT_DTO, fileName, uuidFile, extension)
 		category = domainModels.CATEGORY_PROCESS_DOCUMENT_DTO
 		mediaType = domainModels.MEDIA_TYPE_DOCUMENT
 	default:
-		objectKey = fmt.Sprintf(`private/others/%s/%s-%s`, uuidUser, uuidFile, safeObjectType)
+		objectKey = fmt.Sprintf(`private/others/%s/%s-%s`, OwnerUUID, uuidFile, safeObjectType)
 		category = "others"
 		mediaType = domainModels.MEDIA_TYPE_ARCHIVE
 	}
 
 	err := sa.mediaRepository.CreateMediaMetadata(ctx, AplicationModel.StorageModel{
-		OwnerUUID:       uuidUser,
+		OwnerUUID:       OwnerUUID,
 		MediaType:       mediaType,
 		CategoryProcess: category,
 		NameFile:        fileName,
@@ -254,7 +264,7 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 	if err != nil {
 		sa.logger.Error("Failed to persist media metadata", map[string]interface{}{
 			"error":         err.Error(),
-			"ownerId":       uuidUser,
+			"ownerId":       OwnerUUID,
 			"mediaType":     mediaType,
 			"category":      category,
 			"storageKey":    objectKey,
@@ -265,7 +275,7 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 	}
 
 	sa.logger.Info("Media metadata persisted", map[string]interface{}{
-		"ownerId":       uuidUser,
+		"ownerId":       OwnerUUID,
 		"mediaType":     mediaType,
 		"category":      category,
 		"storageKey":    objectKey,
@@ -284,7 +294,7 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 	}
 
 	sa.logger.Info("ExecuteGetPresignedPutURL finished", map[string]interface{}{
-		"ownerId":       uuidUser,
+		"ownerId":       OwnerUUID,
 		"storageKey":    objectKey,
 		"correlationId": correlationId,
 		"durationMs":    time.Since(start).Milliseconds(),

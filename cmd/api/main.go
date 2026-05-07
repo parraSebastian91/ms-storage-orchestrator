@@ -48,7 +48,7 @@ func main() {
 	messagingPublisher := messaging.NewMessagingPublisherImpl(resources.rabbitMqClient, resources.logger)
 	storageMinIOAdapterService := storage.NewStorageMinIOServiceImpl(resources.storageClient, resources.logger)
 	mediaRepositoryAdapter := database.NewMediaRepositoryAdapter(resources.postgresClient, resources.logger)
-	externalServiceAdapter := external_services.NewExternalService(cfg.ExternalService)
+	externalServiceAdapter := external_services.NewExternalService(cfg.ExternalCoreService, resources.logger)
 
 	// ======== Inicializacion Aplication Use Cases ========
 

@@ -6,4 +6,5 @@ type GetPresignedPutURLCommand struct {
 	FileName      string
 	ContentType   string
 	CorrelationId string
+	Organization  string
 }
