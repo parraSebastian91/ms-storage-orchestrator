@@ -7,5 +7,6 @@ type NotifyProcessDTO struct {
 	App           string         `json:"app" validate:"required"`
 	CorrelationId string         `json:"correlation_id"`
 	OwnerUUID     string         `json:"owner_uuid" validate:"required"`
+	Gestor        string         `json:"gestor" validate:"required"`
 	Payload       FacturaDataDTO `json:"payload" validate:"required"`
 }

@@ -201,6 +201,7 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 	contentType := strings.TrimSpace(command.ContentType)
 	correlationId := strings.TrimSpace(command.CorrelationId)
 	organization := strings.TrimSpace(command.Organization)
+	gestor := strings.TrimSpace(command.Gestor)
 
 	sa.logger.Info("ExecuteGetPresignedPutURL started", map[string]interface{}{
 		"ownerId":       OwnerUUID,
@@ -208,6 +209,7 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 		"contentType":   contentType,
 		"correlationId": correlationId,
 		"organization":  organization,
+		"gestor":        gestor,
 	})
 
 	if OwnerUUID == "" || objectType == "" || contentType == "" {
@@ -217,6 +219,7 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 			"contentType":   contentType,
 			"correlationId": correlationId,
 			"organization":  organization,
+			"gestor":        gestor,
 		})
 		return "", fmt.Errorf("uuid, objectType, fileName and contentType are required")
 	}
@@ -254,6 +257,7 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 
 	err := sa.mediaRepository.CreateMediaMetadata(ctx, AplicationModel.StorageModel{
 		OwnerUUID:       OwnerUUID,
+		Gestor:          gestor,
 		MediaType:       mediaType,
 		CategoryProcess: category,
 		NameFile:        fileName,

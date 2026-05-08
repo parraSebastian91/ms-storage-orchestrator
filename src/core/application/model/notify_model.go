@@ -6,6 +6,7 @@ type NotifyModel struct {
 	Timestamp     string        `json:"timestamp"`
 	CorrelationId string        `json:"correlationId"`
 	OwnerUUID     string        `json:"ownerUUID"`
+	Gestor        string        `json:"gestor"`
 	App           string        `json:"app"`
 	Payload       NotifyPayload `json:"payload"`
 }

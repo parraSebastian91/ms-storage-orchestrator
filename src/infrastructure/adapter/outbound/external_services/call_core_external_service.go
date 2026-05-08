@@ -38,6 +38,7 @@ func (es *ExternalService) CallNotifyCoreService(ctx context.Context, payload Ap
 	es.logger.Info("Calling core service notify endpoint", map[string]interface{}{
 		"url":           url,
 		"correlationId": payload.CorrelationId,
+		"gestor":        payload.Gestor,
 	})
 	return es.doWithRetry(ctx, http.MethodPut, url, payload)
 }

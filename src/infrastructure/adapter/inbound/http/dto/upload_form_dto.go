@@ -5,6 +5,7 @@ type PresignedURLRequestDTO struct {
 	ObjectType   string `query:"object_type" validate:"required"`
 	FileName     string `query:"file_name" validate:"required"`
 	Organization string `query:"organization"`
+	Gestor       string `query:"gestor" validate:"required"`
 	ContentType  string `query:"content_type" validate:"required"`
 }
 

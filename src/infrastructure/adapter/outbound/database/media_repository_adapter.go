@@ -51,8 +51,9 @@ func (a *MediaRepositoryAdapter) CreateMediaMetadata(ctx context.Context, model 
 			original_name,
 			mime_type,
 			storage_key,
-			correlation_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			correlation_id,
+			gestor
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := a.postgresClient.Pool.Exec(
@@ -66,6 +67,7 @@ func (a *MediaRepositoryAdapter) CreateMediaMetadata(ctx context.Context, model 
 		model.FormatFile,
 		model.StorageKey,
 		model.CorrelationId,
+		model.Gestor,
 	)
 	if err != nil {
 		a.logger.Error("Failed to create media metadata", map[string]interface{}{
@@ -75,6 +77,7 @@ func (a *MediaRepositoryAdapter) CreateMediaMetadata(ctx context.Context, model 
 			"category":      model.CategoryProcess,
 			"storageKey":    model.StorageKey,
 			"correlationId": model.CorrelationId,
+			"gestor":        model.Gestor,
 			"durationMs":    time.Since(start).Milliseconds(),
 		})
 		return err
@@ -86,6 +89,7 @@ func (a *MediaRepositoryAdapter) CreateMediaMetadata(ctx context.Context, model 
 		"category":      model.CategoryProcess,
 		"storageKey":    model.StorageKey,
 		"correlationId": model.CorrelationId,
+		"gestor":        model.Gestor,
 		"durationMs":    time.Since(start).Milliseconds(),
 	})
 
@@ -119,7 +123,8 @@ func (a *MediaRepositoryAdapter) GetMediaMetadata(ctx context.Context, objectKey
 			original_name, 
 			mime_type, 
 			storage_key,
-			correlation_id 
+			correlation_id,
+			gestor
 		FROM 
 			media.media_assets
 		where 
@@ -137,12 +142,14 @@ func (a *MediaRepositoryAdapter) GetMediaMetadata(ctx context.Context, objectKey
 			&mediaModel.FormatFile,
 			&mediaModel.StorageKey,
 			&mediaModel.CorrelationId,
+			&mediaModel.Gestor,
 		)
 		if err == nil {
 			a.logger.Info("GetMediaMetadata found record", map[string]interface{}{
 				"storageKey":    key,
 				"assetId":       mediaModel.AssetId,
 				"correlationId": mediaModel.CorrelationId,
+				"gestor":        mediaModel.Gestor,
 				"durationMs":    time.Since(start).Milliseconds(),
 			})
 			return mediaModel, nil

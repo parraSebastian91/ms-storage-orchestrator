@@ -179,6 +179,7 @@ func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
 			ContentType:   presignedURLRequest.ContentType,
 			CorrelationId: correlationId,
 			Organization:  presignedURLRequest.Organization,
+			Gestor:        presignedURLRequest.Gestor,
 		},
 	)
 
@@ -327,6 +328,7 @@ func (c *StorageController) NotifyFileProcessedHandler(ctx fiber.Ctx) error {
 		Timestamp:     notification.Timestamp,
 		CorrelationId: notification.CorrelationId,
 		OwnerUUID:     notification.OwnerUUID,
+		Gestor:        notification.Gestor,
 		App:           "storage-orchestrator",
 		Payload: AplicationModel.NotifyPayload{
 			NumeroFactura: notification.Payload.NumeroFactura,
