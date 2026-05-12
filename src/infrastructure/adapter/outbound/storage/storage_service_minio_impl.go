@@ -156,10 +156,10 @@ func (c *StorageMinIOServiceImpl) GetPresignedURL(ctx context.Context, objectKey
 		}
 		return presigned.String(), nil
 	case domainModels.STORAGE_OPERATION_GET:
-		presigned, err := c.storageClient.presignClient.PresignedGetObject(ctx, c.storageClient.buckets.PrivateOriginal, objectKey, time.Duration(5)*time.Minute, c.storageClient.presignClient.EndpointURL().Query())
+		presigned, err := c.storageClient.presignClient.PresignedGetObject(ctx, c.storageClient.buckets.PrivateProcessed, objectKey, time.Duration(5)*time.Minute, c.storageClient.presignClient.EndpointURL().Query())
 		if err != nil {
 			c.logger.Error("Failed to generate presigned GET URL", map[string]interface{}{
-				"bucket":    c.storageClient.buckets.PrivateOriginal,
+				"bucket":    c.storageClient.buckets.PrivateProcessed,
 				"objectKey": objectKey,
 				"error":     err.Error(),
 			})

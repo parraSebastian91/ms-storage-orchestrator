@@ -306,3 +306,38 @@ func (sa *StorageUsecase) ExecuteGetPresignedPutURL(ctx context.Context, command
 
 	return presignedURL, nil
 }
+
+func (sa *StorageUsecase) ExecuteGetPresignedGetURL(ctx context.Context, command command.GetPresignedGetURLCommand) (string, error) {
+	start := time.Now()
+	storageKey := strings.TrimSpace(command.Storage_key)
+	correlationId := strings.TrimSpace(command.CorrelationId)
+	sa.logger.Info("ExecuteGetPresignedGetURL started", map[string]interface{}{
+		"storageKey":    storageKey,
+		"correlationId": correlationId,
+	})
+	if storageKey == "" {
+		sa.logger.Warn("ExecuteGetPresignedGetURL validation failed", map[string]interface{}{
+			"storageKey":    storageKey,
+			"correlationId": correlationId,
+		})
+		return "", fmt.Errorf("storage_key is required")
+	}
+	presignedURL, err := sa.storageService.GetPresignedURL(ctx, storageKey, domainModels.STORAGE_OPERATION_GET)
+	if err != nil {
+		sa.logger.Error("Failed to generate presigned URL", map[string]interface{}{
+			"error":         err.Error(),
+			"storageKey":    storageKey,
+			"correlationId": correlationId,
+			"durationMs":    time.Since(start).Milliseconds(),
+		})
+		return "", err
+	}
+
+	sa.logger.Info("ExecuteGetPresignedGetURL finished", map[string]interface{}{
+		"storageKey":    storageKey,
+		"correlationId": correlationId,
+		"durationMs":    time.Since(start).Milliseconds(),
+	})
+
+	return presignedURL, nil
+}

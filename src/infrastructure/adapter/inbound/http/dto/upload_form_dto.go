@@ -9,6 +9,11 @@ type PresignedURLRequestDTO struct {
 	ContentType  string `query:"content_type" validate:"required"`
 }
 
+type PresignedGetURLRequestDTO struct {
+	Storage_key   string `query:"storage_key" validate:"required"`
+	CorrelationId string `query:"correlation_id" validate:"required"`
+}
+
 type UploadFormDTO struct {
 	// ========== IDENTIFICACIÓN DEL USUARIO/PROPIETARIO ==========
 	UUID string `form:"uuid" validate:"required,uuid4"`

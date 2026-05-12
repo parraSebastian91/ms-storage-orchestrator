@@ -128,7 +128,7 @@ func (c *StorageController) ListFiles() {
 	// Lógica para manejar la lista de archivos
 }
 
-func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
+func (c *StorageController) GetPresignedPutURL(ctx fiber.Ctx) error {
 	start := time.Now()
 	var presignedURLRequest inbound_dto.PresignedURLRequestDTO
 	if err := ctx.Bind().Query(&presignedURLRequest); err != nil {
@@ -205,6 +205,71 @@ func (c *StorageController) GetPresignedURL(ctx fiber.Ctx) error {
 		"url": url,
 	})
 
+}
+
+func (c *StorageController) GetPresignedGetURL(ctx fiber.Ctx) error {
+	start := time.Now()
+	var presignedURLRequest inbound_dto.PresignedGetURLRequestDTO
+	if err := ctx.Bind().Query(&presignedURLRequest); err != nil {
+		c.logger.Error("Error al parsear la solicitud de URL prefirmada", map[string]interface{}{
+			"error": err.Error(),
+			"path":  ctx.Path(),
+		})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Faltan Datos en la Solicitud",
+		})
+	}
+
+	correlationId := strings.TrimSpace(ctx.Get("X-Correlation-Id"))
+	if correlationId == "" {
+		correlationId = "N/A"
+	}
+
+	c.logger.Info("Presigned URL request received", map[string]interface{}{
+		"correlationId": correlationId,
+		"path":          ctx.Path(),
+		"method":        ctx.Method(),
+	})
+
+	presignedURLRequest.Storage_key = strings.TrimSpace(presignedURLRequest.Storage_key)
+	if presignedURLRequest.Storage_key == "" {
+		c.logger.Warn("Presigned URL request validation failed", map[string]interface{}{
+			"correlationId": correlationId,
+			"storage_key":   presignedURLRequest.Storage_key,
+		})
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "storage_key es requerido",
+		})
+	}
+
+	url, err := c.storageApplication.ExecuteGetPresignedGetURL(
+		ctx.Context(),
+		command.GetPresignedGetURLCommand{
+			Storage_key:   presignedURLRequest.Storage_key,
+			CorrelationId: correlationId,
+		},
+	)
+
+	if err != nil {
+		c.logger.Error("Error al obtener la URL prefirmada", map[string]interface{}{
+			"error":         err.Error(),
+			"correlationId": correlationId,
+			"durationMs":    time.Since(start).Milliseconds(),
+		})
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "No se pudo generar la URL prefirmada",
+		})
+	}
+	c.logger.Info("Presigned URL generated successfully", map[string]interface{}{
+		"storage_key":     presignedURLRequest.Storage_key,
+		"correlationId":   correlationId,
+		"durationMs":      time.Since(start).Milliseconds(),
+		"presignedUrlSet": url != "",
+	})
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"url":           url,
+		"correlationId": correlationId,
+	})
 }
 
 func (c *StorageController) MinioWebhookHandler(ctx fiber.Ctx) error {

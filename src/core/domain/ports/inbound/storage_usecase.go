@@ -11,5 +11,6 @@ type IStorageUseCase interface {
 	UploadFile(ctx context.Context, uploadFormDTO command.UploadFileCommand) error
 	ExecuteProcessFile(ctx context.Context, objectKey string) error
 	ExecuteGetPresignedPutURL(ctx context.Context, command command.GetPresignedPutURLCommand) (string, error)
+	ExecuteGetPresignedGetURL(ctx context.Context, command command.GetPresignedGetURLCommand) (string, error)
 	ExecuteNotifyProcessObject(ctx context.Context, notifyModel AplicationModel.NotifyModel) error
 }

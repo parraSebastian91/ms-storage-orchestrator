@@ -36,13 +36,17 @@ var RECIPE_DOCUMENT = map[string]DocumentRecipeModel{
 		Name:        "DocumentUpload",
 		OcrLanguage: "spa",
 		Category:    CATEGORY_PROCESS_DOCUMENT_DTO,
+		TargetSize: []MediaSizeModel{
+			{Size: TYPE_SIZE_LG, Width: 600, Height: 900},
+		},
 	},
 }
 
 type DocumentRecipeModel struct {
-	Name        string `json:"name"`
-	OcrLanguage string `json:"ocr_language"`
-	Category    string `json:"category"`
+	Name        string           `json:"name"`
+	OcrLanguage string           `json:"ocr_language"`
+	TargetSize  []MediaSizeModel `json:"target_size"`
+	Category    string           `json:"category"`
 }
 
 type RecipeMediaModel struct {

@@ -9,3 +9,8 @@ type GetPresignedPutURLCommand struct {
 	CorrelationId string
 	Organization  string
 }
+
+type GetPresignedGetURLCommand struct {
+	Storage_key   string
+	CorrelationId string
+}
