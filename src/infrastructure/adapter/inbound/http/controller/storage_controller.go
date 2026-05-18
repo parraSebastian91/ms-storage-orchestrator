@@ -395,6 +395,7 @@ func (c *StorageController) NotifyFileProcessedHandler(ctx fiber.Ctx) error {
 		OwnerUUID:     notification.OwnerUUID,
 		Gestor:        notification.Gestor,
 		App:           "storage-orchestrator",
+		Asset_id:      notification.Asset_id,
 		Payload: AplicationModel.NotifyPayload{
 			NumeroFactura: notification.Payload.NumeroFactura,
 			RutDeudor:     notification.Payload.RutDeudor,

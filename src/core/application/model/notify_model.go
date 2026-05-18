@@ -9,6 +9,7 @@ type NotifyModel struct {
 	Gestor        string        `json:"gestor"`
 	App           string        `json:"app"`
 	Payload       NotifyPayload `json:"payload"`
+	Asset_id      string        `json:"asset_id"`
 }
 
 type NotifyPayload struct {
